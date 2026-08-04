@@ -12,6 +12,7 @@ import {
   View,
   useWindowDimensions
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import {
   ALIBABA_ENDPOINTS,
@@ -115,6 +116,10 @@ export function AISettingsModal({
   const compactLayout = width < 380;
   const [draft, setDraft] = useState<AISettings>(value);
   const [showKey, setShowKey] = useState(false);
+  const [providerExpanded, setProviderExpanded] = useState(!value.apiKey.trim());
+  const [alibabaExpanded, setAlibabaExpanded] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [aboutExpanded, setAboutExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const copy = getTranslations(language);
   const alibabaProvider = isAlibabaProvider(draft.provider) ? draft.provider : null;
@@ -126,11 +131,24 @@ export function AISettingsModal({
     ? detectAlibabaRegion(alibabaProvider, draft.baseUrl)
     : null;
   const alibabaEndpoints = alibabaProvider ? ALIBABA_ENDPOINTS[alibabaProvider] : [];
+  const selectedProviderLabel = isAlibaba
+    ? copy.settings.alibabaCloud
+    : copy.providerNames[draft.provider];
+  const selectedPlanLabel = alibabaProvider
+    ? copy.providerNames[alibabaProvider]
+    : '';
+  const selectedRegionLabel = selectedAlibabaRegion
+    ? copy.regions[selectedAlibabaRegion]
+    : '';
 
   useEffect(() => {
     if (visible) {
       setDraft(value);
       setShowKey(false);
+      setProviderExpanded(!value.apiKey.trim());
+      setAlibabaExpanded(false);
+      setDetailsExpanded(false);
+      setAboutExpanded(false);
     }
   }, [value, visible]);
 
@@ -141,9 +159,15 @@ export function AISettingsModal({
   const selectProviderGroup = (provider: ProviderGroup) => {
     if (provider === 'alibaba') {
       if (!isAlibaba) selectProvider('bailian');
+      setProviderExpanded(false);
+      setAlibabaExpanded(true);
+      setDetailsExpanded(false);
       return;
     }
     selectProvider(provider);
+    setProviderExpanded(false);
+    setAlibabaExpanded(false);
+    setDetailsExpanded(true);
   };
 
   const selectAlibabaRegion = (region: AlibabaRegion) => {
@@ -151,6 +175,8 @@ export function AISettingsModal({
     const endpoint = ALIBABA_ENDPOINTS[alibabaProvider].find((item) => item.id === region);
     if (!endpoint) return;
     setDraft((current) => selectAlibabaRegionSettings(current, endpoint.id));
+    setAlibabaExpanded(false);
+    setDetailsExpanded(true);
   };
 
   const save = async () => {
@@ -209,6 +235,12 @@ export function AISettingsModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
       >
+        <LinearGradient
+          colors={[colors.lavenderGlow, colors.background, colors.background]}
+          locations={[0, 0.32, 1]}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
+        />
         <ScrollView
           style={styles.flex}
           contentContainerStyle={styles.content}
@@ -216,8 +248,7 @@ export function AISettingsModal({
         >
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>{copy.settings.languageEyebrow}</Text>
-              <Text style={styles.title}>{copy.settings.languageTitle}</Text>
+              <Text style={styles.title}>{copy.settings.pageTitle}</Text>
             </View>
             <Pressable
               accessibilityLabel={copy.settings.close}
@@ -229,14 +260,16 @@ export function AISettingsModal({
             </Pressable>
           </View>
 
+          <Text style={styles.eyebrow}>{copy.settings.languageTitle}</Text>
           <Text style={styles.languageBody}>{copy.settings.languageBody}</Text>
-          <View style={styles.chipWrap}>
+          <View accessibilityRole="radiogroup" style={styles.chipWrap}>
             {uiLanguageOptions.map((option) => (
               <ChoiceChip
                 key={option.id}
                 label={option.label}
                 selected={language === option.id}
                 onPress={() => void onLanguageChange(option.id)}
+                role="radio"
               />
             ))}
           </View>
@@ -244,185 +277,269 @@ export function AISettingsModal({
           <View style={styles.sectionDivider} />
           <Text style={styles.eyebrow}>{copy.settings.aiEyebrow}</Text>
           <Text style={styles.aiTitle}>{copy.settings.title}</Text>
-
-          <View style={styles.notice}>
-            <Text style={styles.noticeTitle}>{copy.settings.noticeTitle}</Text>
-            <Text style={styles.noticeBody}>{copy.settings.noticeBody}</Text>
-          </View>
-
-          <Text style={styles.sectionLabel}>{copy.settings.provider}</Text>
-          <View style={styles.chipWrap}>
-            {providerGroups.map((provider) => (
-              <ChoiceChip
-                key={provider}
-                label={
-                  provider === 'alibaba'
-                    ? copy.settings.alibabaCloud
-                    : copy.providerNames[provider]
-                }
-                selected={selectedProviderGroup === provider}
-                onPress={() => selectProviderGroup(provider)}
-              />
-            ))}
-          </View>
-
-          {isAlibaba ? (
-            <View style={styles.alibabaPanel}>
-              <Text style={styles.planSectionTitle}>{copy.settings.alibabaPlanTitle}</Text>
-              <Text style={styles.hint}>{copy.settings.alibabaPlanBody}</Text>
-              <View accessibilityRole="radiogroup" style={styles.planList}>
-                {ALIBABA_PLANS.map((provider) => (
-                  <PlanOption
-                    key={provider}
-                    label={copy.providerNames[provider]}
-                    description={copy.providerNotes[provider]}
-                    selected={draft.provider === provider}
-                    onPress={() => selectProvider(provider)}
-                  />
-                ))}
-              </View>
-
-              <Text style={styles.planSectionTitle}>{copy.settings.alibabaRegionTitle}</Text>
-              <Text style={styles.hint}>{copy.settings.alibabaRegionBody}</Text>
-              <View style={styles.chipWrap}>
-                {alibabaEndpoints.map((endpoint) => (
-                  <ChoiceChip
-                    key={endpoint.id}
-                    label={copy.regions[endpoint.id]}
-                    selected={selectedAlibabaRegion === endpoint.id}
-                    onPress={() => selectAlibabaRegion(endpoint.id)}
-                  />
-                ))}
-              </View>
-
-              {draft.provider !== 'bailian' ? (
-                <View style={styles.restrictedPlanNotice}>
-                  <Text style={styles.restrictedPlanTitle}>
-                    {copy.settings.restrictedPlanTitle}
-                  </Text>
-                  <Text style={styles.restrictedPlanBody}>
-                    {copy.settings.restrictedPlanBody}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          ) : (
-            <Text style={styles.hint}>{copy.providerNotes[draft.provider]}</Text>
-          )}
-
-          <Text style={styles.sectionLabel}>{copy.settings.apiKey}</Text>
-          <View style={[styles.keyRow, compactLayout && styles.compactKeyRow]}>
-            <TextInput
-              accessibilityLabel={copy.settings.apiKey}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder={
-                draft.provider === 'bailian-coding' || draft.provider === 'bailian-token'
-                  ? 'sk-sp-…'
-                  : copy.settings.apiKeyPlaceholder
-              }
-              placeholderTextColor={colors.inkMuted}
-              secureTextEntry={!showKey}
-              value={draft.apiKey}
-              onChangeText={(apiKey) => setDraft((current) => ({ ...current, apiKey }))}
-              style={[styles.input, styles.keyInput]}
-            />
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setShowKey((current) => !current)}
-              style={styles.showButton}
-            >
-              <Text style={styles.showButtonText}>
-                {showKey ? copy.settings.hide : copy.settings.show}
-              </Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.sectionLabel}>{copy.settings.baseUrl}</Text>
-          <TextInput
-            accessibilityLabel={copy.settings.baseUrl}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            placeholder="https://…/v1"
-            placeholderTextColor={colors.inkMuted}
-            value={draft.baseUrl}
-            onChangeText={(baseUrl) => setDraft((current) => ({ ...current, baseUrl }))}
-            style={styles.input}
-          />
-
-          <Text style={styles.sectionLabel}>{copy.settings.modelId}</Text>
-          <TextInput
-            accessibilityLabel={copy.settings.modelId}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder={copy.settings.modelPlaceholder}
-            placeholderTextColor={colors.inkMuted}
-            value={draft.model}
-            onChangeText={(model) =>
-              setDraft((current) => ({
-                ...current,
-                model,
-                supportsImages:
-                  model === current.model ? current.supportsImages : false
-              }))
-            }
-            style={styles.input}
-          />
+          <Text style={styles.privacyNote}>{copy.settings.privacyNote}</Text>
 
           <Pressable
-            accessibilityRole="switch"
-            accessibilityState={{ checked: draft.supportsImages }}
-            onPress={() =>
-              setDraft((current) => ({
-                ...current,
-                supportsImages: !current.supportsImages
-              }))
-            }
-            style={({ pressed }) => [
-              styles.capabilityRow,
-              draft.supportsImages && styles.capabilityRowEnabled,
-              pressed && styles.planOptionPressed
-            ]}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: providerExpanded }}
+            onPress={() => setProviderExpanded((current) => !current)}
+            style={({ pressed }) => [styles.detailsToggle, pressed && styles.planOptionPressed]}
           >
-            <View style={styles.capabilityCopy}>
-              <Text style={styles.capabilityTitle}>
-                {copy.settings.imageInputTitle}
-              </Text>
-              <Text style={styles.capabilityBody}>
-                {copy.settings.imageInputBody}
-              </Text>
+            <View style={styles.detailsToggleCopy}>
+              <Text style={styles.detailsTitle}>{copy.settings.provider}</Text>
+              <Text numberOfLines={1} style={styles.detailsSummary}>{selectedProviderLabel}</Text>
             </View>
-            <View
-              style={[
-                styles.switchTrack,
-                draft.supportsImages && styles.switchTrackEnabled
-              ]}
-            >
-              <View
-                style={[
-                  styles.switchThumb,
-                  draft.supportsImages && styles.switchThumbEnabled
-                ]}
-              />
-            </View>
-            <Text style={styles.capabilityState}>
-              {draft.supportsImages
-                ? copy.settings.imageInputOn
-                : copy.settings.imageInputOff}
+            <Text style={styles.detailsAction}>
+              {providerExpanded ? copy.settings.detailsHide : copy.settings.detailsShow}
             </Text>
           </Pressable>
 
-          <View style={styles.warningBox}>
-            <Text style={styles.warningTitle}>{copy.settings.prototypeTitle}</Text>
-            <Text style={styles.warningText}>{copy.settings.prototypeBody}</Text>
-          </View>
+          {providerExpanded ? (
+            <View accessibilityRole="radiogroup" style={styles.providerGrid}>
+              {providerGroups.map((provider) => (
+                <ChoiceChip
+                  key={provider}
+                  label={
+                    provider === 'alibaba'
+                      ? copy.settings.alibabaCloud
+                      : copy.providerNames[provider]
+                  }
+                  selected={selectedProviderGroup === provider}
+                  onPress={() => selectProviderGroup(provider)}
+                  variant="tile"
+                  style={styles.providerOption}
+                  role="radio"
+                />
+              ))}
+            </View>
+          ) : null}
 
-          <View style={styles.buttonStack}>
-            <PrimaryButton label={copy.settings.save} onPress={save} loading={saving} />
-            <PrimaryButton label={copy.settings.clear} variant="danger" onPress={clear} />
-          </View>
+          {isAlibaba ? (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: alibabaExpanded }}
+                onPress={() => setAlibabaExpanded((current) => !current)}
+                style={({ pressed }) => [styles.detailsToggle, pressed && styles.planOptionPressed]}
+              >
+                <View style={styles.detailsToggleCopy}>
+                  <Text style={styles.detailsTitle}>{copy.settings.planServerTitle}</Text>
+                  <Text numberOfLines={1} style={styles.detailsSummary}>
+                    {copy.settings.planServerSummary(selectedPlanLabel, selectedRegionLabel)}
+                  </Text>
+                </View>
+                <Text style={styles.detailsAction}>
+                  {alibabaExpanded ? copy.settings.detailsHide : copy.settings.detailsShow}
+                </Text>
+              </Pressable>
+
+              {alibabaExpanded ? (
+                <View style={styles.alibabaPanel}>
+                  <Text style={styles.planSectionTitle}>{copy.settings.alibabaPlanTitle}</Text>
+                  <Text style={styles.hint}>{copy.settings.alibabaPlanBody}</Text>
+                  <View accessibilityRole="radiogroup" style={styles.planList}>
+                    {ALIBABA_PLANS.map((provider) => (
+                      <PlanOption
+                        key={provider}
+                        label={copy.providerNames[provider]}
+                        description={copy.providerNotes[provider]}
+                        selected={draft.provider === provider}
+                        onPress={() => selectProvider(provider)}
+                      />
+                    ))}
+                  </View>
+
+                  <Text style={styles.planSectionTitle}>{copy.settings.alibabaRegionTitle}</Text>
+                  <Text style={styles.hint}>{copy.settings.alibabaRegionBody}</Text>
+                  <View accessibilityRole="radiogroup" style={styles.chipWrap}>
+                    {alibabaEndpoints.map((endpoint) => (
+                      <ChoiceChip
+                        key={endpoint.id}
+                        label={copy.regions[endpoint.id]}
+                        selected={selectedAlibabaRegion === endpoint.id}
+                        onPress={() => selectAlibabaRegion(endpoint.id)}
+                        variant="tile"
+                        role="radio"
+                      />
+                    ))}
+                  </View>
+
+                  {draft.provider !== 'bailian' ? (
+                    <View style={styles.restrictedPlanNotice}>
+                      <Text style={styles.restrictedPlanTitle}>
+                        {copy.settings.restrictedPlanTitle}
+                      </Text>
+                      <Text style={styles.restrictedPlanBody}>
+                        {copy.settings.restrictedPlanBody}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+            </>
+          ) : (
+            providerExpanded ? <Text style={styles.hint}>{copy.providerNotes[draft.provider]}</Text> : null
+          )}
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: detailsExpanded }}
+            onPress={() => setDetailsExpanded((current) => !current)}
+            style={({ pressed }) => [
+              styles.detailsToggle,
+              pressed && styles.planOptionPressed
+            ]}
+          >
+            <View style={styles.detailsToggleCopy}>
+              <Text style={styles.detailsTitle}>{copy.settings.detailsTitle}</Text>
+              <Text numberOfLines={1} style={styles.detailsSummary}>
+                {draft.apiKey.trim()
+                  ? copy.settings.detailsConfigured(draft.model.trim())
+                  : copy.settings.detailsEmpty}
+              </Text>
+            </View>
+            <Text style={styles.detailsAction}>
+              {detailsExpanded ? copy.settings.detailsHide : copy.settings.detailsShow}
+            </Text>
+          </Pressable>
+
+          {detailsExpanded ? (
+            <View style={styles.detailsFields}>
+              <Text style={styles.sectionLabel}>{copy.settings.apiKey}</Text>
+              <View style={[styles.keyRow, compactLayout && styles.compactKeyRow]}>
+                <TextInput
+                  accessibilityLabel={copy.settings.apiKey}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder={
+                    draft.provider === 'bailian-coding' || draft.provider === 'bailian-token'
+                      ? 'sk-sp-…'
+                      : copy.settings.apiKeyPlaceholder
+                  }
+                  placeholderTextColor={colors.inkMuted}
+                  secureTextEntry={!showKey}
+                  value={draft.apiKey}
+                  onChangeText={(apiKey) => setDraft((current) => ({ ...current, apiKey }))}
+                  style={[styles.input, styles.keyInput]}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowKey((current) => !current)}
+                  style={styles.showButton}
+                >
+                  <Text style={styles.showButtonText}>
+                    {showKey ? copy.settings.hide : copy.settings.show}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Text style={styles.sectionLabel}>{copy.settings.baseUrl}</Text>
+              <TextInput
+                accessibilityLabel={copy.settings.baseUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder="https://…/v1"
+                placeholderTextColor={colors.inkMuted}
+                value={draft.baseUrl}
+                onChangeText={(baseUrl) => setDraft((current) => ({ ...current, baseUrl }))}
+                style={styles.input}
+              />
+
+              <Text style={styles.sectionLabel}>{copy.settings.modelId}</Text>
+              <TextInput
+                accessibilityLabel={copy.settings.modelId}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder={copy.settings.modelPlaceholder}
+                placeholderTextColor={colors.inkMuted}
+                value={draft.model}
+                onChangeText={(model) =>
+                  setDraft((current) => ({
+                    ...current,
+                    model,
+                    supportsImages:
+                      model === current.model ? current.supportsImages : false
+                  }))
+                }
+                style={styles.input}
+              />
+
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityState={{ checked: draft.supportsImages }}
+                onPress={() =>
+                  setDraft((current) => ({
+                    ...current,
+                    supportsImages: !current.supportsImages
+                  }))
+                }
+                style={({ pressed }) => [
+                  styles.capabilityRow,
+                  draft.supportsImages && styles.capabilityRowEnabled,
+                  pressed && styles.planOptionPressed
+                ]}
+              >
+                <View style={styles.capabilityCopy}>
+                  <Text style={styles.capabilityTitle}>
+                    {copy.settings.imageInputTitle}
+                  </Text>
+                  <Text style={styles.capabilityBody}>
+                    {copy.settings.imageInputBody}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.switchTrack,
+                    draft.supportsImages && styles.switchTrackEnabled
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.switchThumb,
+                      draft.supportsImages && styles.switchThumbEnabled
+                    ]}
+                  />
+                </View>
+                <Text style={styles.capabilityState}>
+                  {draft.supportsImages
+                    ? copy.settings.imageInputOn
+                    : copy.settings.imageInputOff}
+                </Text>
+              </Pressable>
+
+              {draft.apiKey.trim() ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={clear}
+                  style={({ pressed }) => [styles.clearKeyButton, pressed && styles.planOptionPressed]}
+                >
+                  <Text style={styles.clearKeyText}>{copy.settings.clear}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: aboutExpanded }}
+            onPress={() => setAboutExpanded((current) => !current)}
+            style={({ pressed }) => [styles.aboutToggle, pressed && styles.planOptionPressed]}
+          >
+            <Text style={styles.aboutToggleText}>{copy.settings.prototypeTitle}</Text>
+            <Text style={styles.detailsAction}>
+              {aboutExpanded ? copy.settings.detailsHide : copy.settings.detailsShow}
+            </Text>
+          </Pressable>
+          {aboutExpanded ? (
+            <View style={styles.warningBox}>
+              <Text style={styles.warningText}>{copy.settings.prototypeBody}</Text>
+            </View>
+          ) : null}
         </ScrollView>
+        <View style={styles.saveDock}>
+          <PrimaryButton label={copy.settings.save} onPress={save} loading={saving} />
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -432,9 +549,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: {
     padding: 22,
-    paddingBottom: 48,
-    backgroundColor: colors.background,
-    gap: 12
+    paddingBottom: 24,
+    backgroundColor: 'transparent',
+    gap: 10
   },
   header: {
     flexDirection: 'row',
@@ -457,6 +574,13 @@ const styles = StyleSheet.create({
     marginTop: 4
   },
   languageBody: { color: colors.inkMuted, fontSize: 13, lineHeight: 20, marginTop: -4 },
+  privacyNote: {
+    color: colors.inkMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: -3,
+    marginBottom: 3
+  },
   sectionDivider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
   aiTitle: {
     color: colors.ink,
@@ -468,7 +592,7 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -477,13 +601,16 @@ const styles = StyleSheet.create({
   },
   closeText: { color: colors.ink, fontSize: 18, fontWeight: '700' },
   notice: {
-    backgroundColor: colors.mint,
-    borderRadius: radius.md,
-    padding: 16,
-    marginVertical: 4
+    backgroundColor: colors.surface,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    marginVertical: 6
   },
-  noticeTitle: { color: colors.success, fontWeight: '800', fontSize: 15 },
-  noticeBody: { color: colors.ink, lineHeight: 20, marginTop: 5, fontSize: 13 },
+  noticeTitle: { color: colors.ink, fontWeight: '800', fontSize: 15 },
+  noticeBody: { color: colors.inkMuted, lineHeight: 20, marginTop: 4, fontSize: 13 },
   sectionLabel: {
     color: colors.ink,
     fontSize: 14,
@@ -491,12 +618,16 @@ const styles = StyleSheet.create({
     marginTop: 7
   },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  providerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  providerOption: { flexBasis: '47%', flexGrow: 1 },
   hint: { color: colors.inkMuted, fontSize: 12, lineHeight: 17 },
   alibabaPanel: {
     gap: 10,
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    padding: 14
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 14,
+    marginVertical: 3
   },
   planSectionTitle: { color: colors.ink, fontSize: 14, fontWeight: '800', marginTop: 2 },
   planList: { gap: 8 },
@@ -511,7 +642,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderStrong,
     backgroundColor: colors.surface
   },
-  planOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  planOptionSelected: { borderColor: colors.primary, backgroundColor: colors.surface },
   planOptionPressed: { opacity: 0.82 },
   radioOuter: {
     width: 20,
@@ -529,9 +660,34 @@ const styles = StyleSheet.create({
   planOptionTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
   planOptionTitleSelected: { color: colors.primaryDark },
   planOptionDescription: { color: colors.inkMuted, fontSize: 12, lineHeight: 17, marginTop: 3 },
-  restrictedPlanNotice: { backgroundColor: colors.peach, borderRadius: radius.md, padding: 12 },
+  restrictedPlanNotice: {
+    backgroundColor: colors.surface,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.peachStrong,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 11
+  },
   restrictedPlanTitle: { color: colors.peachStrong, fontSize: 13, fontWeight: '800' },
   restrictedPlanBody: { color: colors.ink, fontSize: 12, lineHeight: 18, marginTop: 4 },
+  detailsToggle: {
+    minHeight: 62,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 11,
+    marginTop: 4
+  },
+  detailsToggleCopy: { flex: 1 },
+  detailsTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  detailsSummary: { color: colors.inkMuted, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  detailsAction: { color: colors.primaryDark, fontSize: 12, fontWeight: '800' },
+  detailsFields: { gap: 10 },
+  clearKeyButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  clearKeyText: { color: colors.danger, fontSize: 13, fontWeight: '800' },
   input: {
     minHeight: 50,
     borderWidth: 1,
@@ -552,7 +708,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primarySoft
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border
   },
   showButtonText: { color: colors.primaryDark, fontWeight: '800' },
   capabilityRow: {
@@ -569,7 +727,7 @@ const styles = StyleSheet.create({
   },
   capabilityRowEnabled: {
     borderColor: colors.primary,
-    backgroundColor: colors.primarySoft
+    backgroundColor: colors.surface
   },
   capabilityCopy: { flex: 1, minWidth: 210 },
   capabilityTitle: { color: colors.ink, fontSize: 14, fontWeight: '900' },
@@ -592,12 +750,28 @@ const styles = StyleSheet.create({
   switchThumbEnabled: { alignSelf: 'flex-end' },
   capabilityState: { color: colors.primaryDark, fontSize: 11, fontWeight: '900' },
   warningBox: {
-    backgroundColor: colors.peach,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
-    padding: 15,
-    marginTop: 8
+    paddingHorizontal: 14,
+    paddingVertical: 12
   },
-  warningTitle: { color: colors.peachStrong, fontWeight: '800', fontSize: 14 },
-  warningText: { color: colors.ink, marginTop: 4, lineHeight: 19, fontSize: 12 },
+  warningTitle: { color: colors.ink, fontWeight: '800', fontSize: 14 },
+  warningText: { color: colors.inkMuted, lineHeight: 19, fontSize: 12 },
+  aboutToggle: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8
+  },
+  aboutToggleText: { color: colors.inkMuted, fontSize: 12, fontWeight: '800' },
+  saveDock: {
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 14,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border
+  },
   buttonStack: { gap: 10, marginTop: 10 }
 });

@@ -28,6 +28,9 @@ Melo 是一隻不會以飢餓、死亡或連續簽到向用戶施壓的虛擬寵
 - 簡單危機字詞 guard：偵測到明顯自傷／傷人語句時停止一般改寫，改為建議尋求真實世界支援
 - Before／After、Copy 可見回饋、Share，以及英文／繁中／簡中／廣東話輸出
 - 支援 320 px 窄屏、跨平台 Safe Area 與 Reduce Motion
+- 暖白紙張式 UI，加入克制的淡紫至暖白背景漸變，以單一主色、較收斂圓角和分隔資訊列取代多層彩色卡片
+- 設定頁採漸進展開：模型服務、阿里雲方案／伺服器及技術連線欄位預設保持精簡，主要儲存按鈕固定在底部
+- Melo Chat 使用單一標題列，並把每則回覆的 Provider／Model 改成較安靜的訊息註記，輸入區工具也更精簡
 
 ## Melo Chat
 
@@ -77,7 +80,7 @@ npx expo-doctor
 
 ## 驗證狀態
 
-此分支已於 2026 年 8 月 4 日完成：
+此分支已於 2026 年 8 月 5 日完成：
 
 - TypeScript type-check 通過
 - deterministic regression suite 通過，並涵蓋 Provider 真實歸因、Chat 上下文上限、本機保存、安全邊界及圖片能力開關
@@ -88,7 +91,9 @@ npx expo-doctor
 - 渲染 HTTP 500 流程會顯示 `Offline fallback`、`AI rewrite did not complete` 及 `HTTP 500`，不會把本機確定性模板冒充為模型結果
 - 經明確授權後，以合成且不含敏感資料的草稿，使用 `qwen3-coder-plus` 對阿里雲百鍊 Coding Plan 中國區完成一次真實 `rewriteMessage` adapter smoke test；結果為 `source: ai`，不是 fallback。憑證沒有寫入 repository 或文件
 - 再以 Computer Use 在 iOS Simulator 走完整原生 UI，使用已設定且獲明確授權的阿里雲 Coding Plan 帳戶連續測試「溫和」與「直接」兩種語氣。兩段繁中模型輸出明顯不同，結果 badge 均顯示阿里雲 Coding Plan；Metro 每輪各有一行 `provider rewrite succeeded`，output length 分別為 62 與 53。測試沒有讀取或顯示已儲存 key
-- Computer Use 亦以同一個已授權 Simulator 帳戶完成多輪 Melo Chat，使用 `qwen3.7-plus` 收到具上下文且不同的回覆；模型選擇 `encouraging` 表情，新訊息逐句顯示 `AI · Alibaba Cloud · Coding Plan · qwen3.7-plus`，Metro 同步記錄相同 model／expression，完整重新載入 App 後本機對話與歸屬標籤仍能還原
+- Computer Use 亦以同一個已授權 Simulator 帳戶完成多輪 Melo Chat，使用 `qwen3.7-plus` 收到具上下文且不同的回覆；模型選擇 `encouraging` 表情，每則回覆以較安靜的 `Alibaba Cloud · Coding Plan · qwen3.7-plus` 顯示來源，完整重新載入 App 後本機對話與歸屬標籤仍能還原
+- Computer Use 已在 Expo Go 驗證單一標題列 Chat、漸進展開設定頁、固定儲存按鈕與淡紫至暖白背景；英文及繁體中文狀態均可正常操作，Metro 沒有 runtime error
+- 測試用的全合成桌面圖片已匯入 iPhone 17 Simulator，經 Expo Go 原生相片選擇器加入用戶訊息並由真實設定的圖片對話路徑送出；`qwen3.7-plus` 正確描述盆栽、水瓶、耳機、紫色筆記本、鉛筆及手機，Metro 記錄 `Melo provider chat succeeded`、`historyMessages: 8`、`expression: calm` 及相同 Model ID
 
 以上證明 source／離線 Demo 與原生模擬器 Provider UI 路徑已就緒；組員真機仍需在其自身網絡下完成一次可見確認。
 

@@ -102,6 +102,7 @@ export function MeloChat({
 }: MeloChatProps) {
   const { width } = useWindowDimensions();
   const compact = width < 380;
+  const imagePendingWithoutSupport = Boolean(pendingImage && !imageInputEnabled);
   const transcriptRef = useRef<ScrollView>(null);
   const hasMessages = messages.length > 0;
   const latestUserMessage = [...messages]
@@ -166,6 +167,14 @@ export function MeloChat({
             providerConfigured ? styles.modeDotOnline : styles.modeDotOffline
           ]}
         />
+        <Pressable
+          accessibilityLabel={copy.settingsAccessibility}
+          accessibilityRole="button"
+          onPress={onConfigure}
+          style={({ pressed }) => [styles.headerSettings, pressed && styles.pressed]}
+        >
+          <Text style={styles.headerSettingsText}>{copy.settings.pageTitle}</Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -260,9 +269,6 @@ export function MeloChat({
                   isUser ? styles.userMessageGroup : styles.meloMessageGroup
                 ]}
               >
-                <Text style={styles.roleLabel}>
-                  {isUser ? copy.chat.you : copy.chat.melo}
-                </Text>
                 <View style={styles.messageLine}>
                   {!isUser ? (
                     <MeloChatAvatar
@@ -277,6 +283,8 @@ export function MeloChat({
                     />
                   ) : null}
                   <View
+                    accessible
+                    accessibilityLabel={`${isUser ? copy.chat.you : copy.chat.melo}: ${message.text || copy.chat.imageLabel}`}
                     accessibilityLiveRegion={
                       isLatestAssistant ? 'polite' : 'none'
                     }
@@ -305,26 +313,24 @@ export function MeloChat({
                         {message.text}
                       </Text>
                     ) : null}
-                    {sourceLabel ? (
-                      <Text
-                        style={[
-                          styles.sourceLabel,
-                          message.source === 'safety' &&
-                            styles.safetySourceLabel
-                        ]}
-                      >
-                        {sourceLabel}
-                      </Text>
-                    ) : null}
                   </View>
                 </View>
+                {sourceLabel ? (
+                  <Text
+                    style={[
+                      styles.sourceLabel,
+                      message.source === 'safety' && styles.safetySourceLabel
+                    ]}
+                  >
+                    {sourceLabel}
+                  </Text>
+                ) : null}
               </View>
             );
           })}
 
           {sending ? (
             <View style={[styles.messageGroup, styles.meloMessageGroup]}>
-              <Text style={styles.roleLabel}>{copy.chat.melo}</Text>
               <View style={styles.messageLine}>
                 <MeloChatAvatar
                   size={27}
@@ -401,7 +407,7 @@ export function MeloChat({
               disabled={sending}
               onPress={onClear}
               style={({ pressed }) => [
-                styles.utilityButton,
+                styles.clearButton,
                 pressed && styles.pressed,
                 sending && styles.disabled
               ]}
@@ -412,28 +418,35 @@ export function MeloChat({
         ) : null}
 
         {pendingImage ? (
-          <View style={styles.pendingImageRow}>
-            <Image
-              accessibilityLabel={copy.chat.imageLabel}
-              resizeMode="cover"
-              source={{ uri: pendingImage.uri }}
-              style={styles.pendingImage}
-            />
-            <Text numberOfLines={1} style={styles.pendingImageLabel}>
-              {copy.chat.imageLabel}
-            </Text>
-            <Pressable
-              accessibilityLabel={copy.chat.removeImage}
-              accessibilityRole="button"
-              disabled={sending}
-              onPress={onRemoveImage}
-              style={({ pressed }) => [
-                styles.removeImageButton,
-                pressed && styles.pressed
-              ]}
-            >
-              <Text style={styles.removeImageText}>✕</Text>
-            </Pressable>
+          <View style={styles.pendingImageBlock}>
+            <View style={styles.pendingImageRow}>
+              <Image
+                accessibilityLabel={copy.chat.imageLabel}
+                resizeMode="cover"
+                source={{ uri: pendingImage.uri }}
+                style={styles.pendingImage}
+              />
+              <Text numberOfLines={1} style={styles.pendingImageLabel}>
+                {copy.chat.imageLabel}
+              </Text>
+              <Pressable
+                accessibilityLabel={copy.chat.removeImage}
+                accessibilityRole="button"
+                disabled={sending}
+                onPress={onRemoveImage}
+                style={({ pressed }) => [
+                  styles.removeImageButton,
+                  pressed && styles.pressed
+                ]}
+              >
+                <Text style={styles.removeImageText}>✕</Text>
+              </Pressable>
+            </View>
+            {imagePendingWithoutSupport ? (
+              <Text accessibilityLiveRegion="polite" style={styles.imageDisabledHint}>
+                {copy.chat.imageNotEnabledBody}
+              </Text>
+            ) : null}
           </View>
         ) : null}
 
@@ -471,11 +484,18 @@ export function MeloChat({
                 ) : null}
               </View>
               <Pressable
-                accessibilityLabel={sending ? copy.chat.sending : copy.chat.send}
+                accessibilityLabel={
+                  imagePendingWithoutSupport
+                    ? copy.chat.imageNotEnabledBody
+                    : sending
+                      ? copy.chat.sending
+                      : copy.chat.send
+                }
                 accessibilityRole="button"
                 disabled={
                   !memoryReady ||
                   sending ||
+                  imagePendingWithoutSupport ||
                   (draft.trim().length === 0 && !pendingImage)
                 }
                 onPress={onSend}
@@ -483,6 +503,7 @@ export function MeloChat({
                   styles.sendButton,
                   (!memoryReady ||
                     sending ||
+                    imagePendingWithoutSupport ||
                     (draft.trim().length === 0 && !pendingImage)) &&
                     styles.sendDisabled,
                   pressed && styles.pressed
@@ -491,9 +512,6 @@ export function MeloChat({
                 <Text style={styles.sendText}>{sending ? '…' : '↑'}</Text>
               </Pressable>
             </View>
-            {!imageInputEnabled ? (
-              <Text style={styles.imageDisabledHint}>{copy.chat.imageDisabled}</Text>
-            ) : null}
           </>
         ) : null}
       </View>
@@ -507,9 +525,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 640,
     alignSelf: 'center',
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border
+    backgroundColor: 'transparent'
   },
   chatHeader: {
     minHeight: 66,
@@ -534,20 +550,24 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontSize: 17, lineHeight: 21, fontWeight: '900' },
   headerStatus: { color: colors.inkMuted, fontSize: 11, marginTop: 2 },
   modeDot: { width: 10, height: 10, borderRadius: 5 },
-  modeDotOnline: { backgroundColor: colors.mintStrong },
+  modeDotOnline: { backgroundColor: colors.primary },
   modeDotOffline: { backgroundColor: colors.inkMuted },
+  headerSettings: {
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 6
+  },
+  headerSettingsText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
   messageScroll: { flex: 1 },
   messageContent: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 18, gap: 14 },
   boundaryCard: {
     alignSelf: 'center',
     maxWidth: 500,
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 10
+    paddingHorizontal: 12,
+    paddingVertical: 4
   },
-  boundaryTitle: { color: colors.ink, fontWeight: '900', fontSize: 12, textAlign: 'center' },
-  boundaryBody: { color: colors.inkMuted, fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 3 },
+  boundaryTitle: { color: colors.primaryDark, fontWeight: '800', fontSize: 11, textAlign: 'center' },
+  boundaryBody: { color: colors.inkMuted, fontSize: 10, lineHeight: 15, textAlign: 'center', marginTop: 2 },
   memoryWarning: { backgroundColor: colors.peach, borderRadius: radius.md, padding: 13 },
   memoryWarningText: { color: colors.peachStrong, fontSize: 12, lineHeight: 18, fontWeight: '800' },
   memoryLoading: { alignItems: 'center', paddingVertical: 8 },
@@ -575,7 +595,6 @@ const styles = StyleSheet.create({
   messageGroup: { maxWidth: '92%' },
   userMessageGroup: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   meloMessageGroup: { alignSelf: 'flex-start', alignItems: 'flex-start' },
-  roleLabel: { color: colors.inkMuted, fontSize: 10, fontWeight: '800', marginBottom: 4, marginHorizontal: 4 },
   messageLine: { flexDirection: 'row', alignItems: 'flex-end', gap: 7, maxWidth: '100%' },
   bubble: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 11 },
   userBubble: { backgroundColor: colors.primary, borderBottomRightRadius: 6 },
@@ -584,7 +603,7 @@ const styles = StyleSheet.create({
   messageText: { color: colors.ink, fontSize: 15, lineHeight: 21 },
   messageImage: { width: 220, maxWidth: '100%', height: 150, borderRadius: 13, marginBottom: 9 },
   userMessageText: { color: '#FFFFFF' },
-  sourceLabel: { color: colors.success, fontSize: 10, fontWeight: '900', marginTop: 7 },
+  sourceLabel: { color: colors.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 4, marginLeft: 34 },
   safetySourceLabel: { color: colors.danger },
   thinkingText: { color: colors.primaryDark, fontSize: 13, fontWeight: '800' },
   failureCard: { backgroundColor: colors.peach, borderRadius: radius.md, padding: 15 },
@@ -603,11 +622,21 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     gap: 8
   },
-  utilityRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  utilityButton: { minHeight: 32, flex: 1, justifyContent: 'center' },
-  utilityText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
-  clearText: { color: colors.inkMuted, fontSize: 11, fontWeight: '800', textAlign: 'right' },
+  utilityRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
+  utilityButton: {
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: 11,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft
+  },
+  utilityText: { color: colors.primaryDark, fontSize: 10, fontWeight: '800' },
+  clearButton: { minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 },
+  clearText: { color: colors.inkMuted, fontSize: 10, fontWeight: '800', textAlign: 'right' },
   composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 9 },
+  pendingImageBlock: {
+    gap: 5
+  },
   pendingImageRow: {
     minHeight: 54,
     flexDirection: 'row',

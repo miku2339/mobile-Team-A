@@ -103,6 +103,9 @@ Melo rewards positive actions without punishing absence.
 - English, Traditional Chinese, Simplified Chinese and written Cantonese output
 - Before/After review, visible Copy feedback and a deterministic group-project demo
 - Responsive 320 px layouts, cross-platform safe areas and Reduce Motion support
+- Warm paper-like UI with a restrained lavender-to-warm-white background, one primary accent and grouped status rows instead of stacked pastel cards
+- Progressive-disclosure Settings: service, Alibaba plan/server and technical connection fields stay compact until the user opens them; the Save action remains easy to reach
+- Single-header Melo Chat with quieter per-message provider/model attribution and a compact composer toolbar
 - Copy and native Share actions
 - Offline fallback for the Guided Rewrite flow when no API key is available or a provider request fails; Melo Chat never fabricates an offline assistant reply
 - Provider results are labelled as AI only after a readable model response is received
@@ -153,7 +156,7 @@ npx expo-doctor
 
 ## Validation Status
 
-Verified on this branch on 4 August 2026:
+Verified on this branch on 5 August 2026:
 
 - TypeScript type-check passes;
 - the deterministic regression suite passes, including provider truth, bounded Chat context, local persistence, safety-boundary and image-capability cases;
@@ -164,7 +167,9 @@ Verified on this branch on 4 August 2026:
 - a rendered HTTP 500 flow showed `Offline fallback`, `AI rewrite did not complete` and `HTTP 500`, instead of presenting the deterministic template as model output;
 - one explicitly authorised Alibaba Cloud Coding Plan China smoke test passed through Melo's real `rewriteMessage` adapter with `qwen3-coder-plus`, a synthetic non-sensitive draft and `source: ai` rather than fallback. No credential was written to the repository or documentation.
 - Computer Use then exercised the complete native iOS Simulator UI twice against an already configured, explicitly authorised Alibaba Coding Plan account. Gentle and Direct produced visibly different Traditional Chinese drafts; the result badge named Alibaba Coding Plan, while Metro logged exactly one `provider rewrite succeeded` entry per run with output lengths 62 and 53. The saved key was neither read nor displayed.
-- Computer Use also exercised multi-turn Melo Chat through the same authorised Simulator account with `qwen3.7-plus`. The provider returned context-aware, non-identical replies and selected the `encouraging` expression; each new bubble showed `AI · Alibaba Cloud · Coding Plan · qwen3.7-plus`, Metro logged one successful request with the same model/expression, and a full app reload restored the locally stored conversation and attribution.
+- Computer Use visually verified the redesigned Home, single-header Chat and progressive-disclosure Settings sheet in Expo Go, including English and Traditional Chinese states. The restrained lavender-to-warm-white background, fixed Save action and disclosure accessibility states rendered without Metro runtime errors.
+- Computer Use also exercised multi-turn Melo Chat through the same authorised Simulator account with `qwen3.7-plus`. The provider returned context-aware, non-identical replies and selected the `encouraging` expression; each new response kept the quieter `Alibaba Cloud · Coding Plan · qwen3.7-plus` provenance label, and a full app reload restored the locally stored conversation and attribution.
+- A fully synthetic desk image generated for testing was imported into the iPhone 17 Simulator, selected through Expo Go's native photo picker, rendered in the user bubble and sent through the real configured image-capable Chat path. `qwen3.7-plus` correctly described the visible succulent, water bottle, headphones, purple notebook, pencils and phone; Metro recorded `Melo provider chat succeeded` with `historyMessages: 8`, `expression: calm` and the same model ID.
 
 These checks prove source/offline-demo readiness and the native simulator provider UI path. A physical-device Expo Go provider run on a teammate's own network still requires visible confirmation.
 
