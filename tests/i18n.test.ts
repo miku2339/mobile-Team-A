@@ -22,6 +22,24 @@ test('saved UI language accepts only the three supported locales', () => {
   assert.equal(parseUILanguage('not-a-locale'), null);
 });
 
+test('all UI languages disclose provider fallback instead of claiming AI success', () => {
+  for (const language of ['en', 'zh-Hant', 'zh-Hans'] as const) {
+    const copy = getTranslations(language);
+    assert.ok(copy.result.providerFallbackTitle.length > 0);
+    assert.match(copy.result.providerTimeoutBody('Test Provider'), /Test Provider/);
+    assert.match(copy.result.providerNetworkBody('Test Provider'), /Test Provider/);
+    assert.match(copy.result.providerHttpBody('Test Provider', 401), /Test Provider/);
+    assert.match(copy.result.providerInvalidBody('Test Provider'), /Test Provider/);
+    assert.match(copy.result.providerConfigurationBody('Test Provider'), /Test Provider/);
+    assert.match(
+      copy.result.providerDiagnostic(401, 'invalid_api_key', 'request-123'),
+      /401.*invalid_api_key.*request-123/
+    );
+    assert.match(copy.footer.fallback('Test Provider'), /Test Provider/);
+    assert.match(copy.footer.notSent('Test Provider'), /Test Provider/);
+  }
+});
+
 test('offline rewrite supports Simplified Chinese output', () => {
   const result = generateFallbackMessage({
     draft: '你们都不做事，我不想继续这个小组项目了。',

@@ -16,6 +16,14 @@ export type EmotionId = 'angry' | 'overwhelmed' | 'hurt' | 'anxious' | 'disappoi
 export type RecipientId = 'friend' | 'teammate' | 'teacher' | 'family';
 export type ToneId = 'gentle' | 'direct' | 'formal';
 export type PetMood = 'idle' | 'listening' | 'checking' | 'breathing' | 'proud';
+export type RewriteFallbackReason =
+  | 'no-key'
+  | 'timeout'
+  | 'network-error'
+  | 'http-error'
+  | 'invalid-response'
+  | 'configuration-error'
+  | 'unsafe-output';
 
 export interface ProviderPreset {
   id: ProviderId;
@@ -45,5 +53,11 @@ export interface RewriteResult {
   source: 'ai' | 'fallback' | 'safety';
   providerLabel: string;
   providerId?: ProviderId;
+  attemptedProviderId?: ProviderId;
+  configuredProviderId?: ProviderId;
+  fallbackReason?: RewriteFallbackReason;
+  providerHttpStatus?: number;
+  providerErrorCode?: string;
+  providerRequestId?: string;
   explanation: string[];
 }
