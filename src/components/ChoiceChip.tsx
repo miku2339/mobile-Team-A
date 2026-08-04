@@ -1,4 +1,10 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type ViewStyle
+} from 'react-native';
 
 import { colors, radius } from '../theme';
 
@@ -7,18 +13,31 @@ interface ChoiceChipProps {
   selected: boolean;
   onPress: () => void;
   emoji?: string;
+  variant?: 'pill' | 'tile';
+  style?: StyleProp<ViewStyle>;
+  role?: 'button' | 'radio';
 }
 
-export function ChoiceChip({ label, selected, onPress, emoji }: ChoiceChipProps) {
+export function ChoiceChip({
+  label,
+  selected,
+  onPress,
+  emoji,
+  variant = 'pill',
+  style,
+  role = 'button'
+}: ChoiceChipProps) {
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityRole={role}
+      accessibilityState={role === 'radio' ? { checked: selected } : { selected }}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
+        variant === 'tile' && styles.tile,
         selected && styles.selected,
-        pressed && styles.pressed
+        pressed && styles.pressed,
+        style
       ]}
     >
       {emoji ? <Text style={styles.emoji}>{emoji}</Text> : null}
@@ -41,8 +60,15 @@ const styles = StyleSheet.create({
     gap: 7
   },
   selected: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primary
+    backgroundColor: colors.surface,
+    borderColor: colors.primary,
+    borderWidth: 2
+  },
+  tile: {
+    minHeight: 52,
+    borderRadius: radius.md,
+    justifyContent: 'center',
+    paddingHorizontal: 12
   },
   pressed: {
     opacity: 0.8

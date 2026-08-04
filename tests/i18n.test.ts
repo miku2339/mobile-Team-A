@@ -13,8 +13,8 @@ test('settings offers exactly English, Traditional Chinese and Simplified Chines
   assert.equal(getTranslations('zh-Hant').settings.languageTitle, '介面語言');
   assert.equal(getTranslations('zh-Hans').settings.languageTitle, '界面语言');
   assert.equal(getTranslations('en').providerNames.bigmodel, 'Z.ai BigModel');
-  assert.equal(getTranslations('zh-Hant').providerNames.bigmodel, '智譜 BigModel');
-  assert.equal(getTranslations('zh-Hans').providerNames.bigmodel, '智谱 BigModel');
+  assert.equal(getTranslations('zh-Hant').providerNames.bigmodel, 'Z.ai BigModel');
+  assert.equal(getTranslations('zh-Hans').providerNames.bigmodel, 'Z.ai BigModel');
 });
 
 test('saved UI language accepts only the three supported locales', () => {
@@ -68,11 +68,34 @@ test('Melo chat has complete session, safety and provider states in every UI lan
       copy.chat.aiLabel('Test Provider', 'test-model'),
       /Test Provider.*test-model/
     );
+    assert.match(copy.chat.sessionNotice, /8/);
+    assert.match(copy.chat.sessionNotice, /service|服務|服务/);
+    assert.match(copy.chat.sessionNotice, /image|圖片|图片/i);
     assert.match(copy.chat.httpBody('Test Provider', 429), /Test Provider/);
     assert.ok(copy.chat.sessionNotice.length > 0);
     assert.ok(copy.chat.notTherapyNotice.length > 0);
     assert.ok(copy.chat.memoryUnavailable.length > 0);
     assert.ok(copy.chat.memoryLoading.length > 0);
     assert.ok(copy.chat.clearConfirmBody.length > 0);
+  }
+});
+
+test('settings never describes an unsaved draft key as saved', () => {
+  assert.equal(getTranslations('en').settings.detailsConfigured('test-model'), 'Key entered · test-model');
+  assert.equal(getTranslations('zh-Hant').settings.detailsConfigured('test-model'), 'Key 已輸入 · test-model');
+  assert.equal(getTranslations('zh-Hans').settings.detailsConfigured('test-model'), 'Key 已输入 · test-model');
+});
+
+test('home keeps model details in settings and message provenance, not the welcome screen', () => {
+  for (const language of ['en', 'zh-Hant', 'zh-Hans'] as const) {
+    const copy = getTranslations(language);
+    assert.ok(copy.home.connectionLabel.length > 0);
+    assert.ok(copy.home.calmStarsLabel.length > 0);
+    assert.match(copy.home.providerReady('Test Provider', 'private-model-id'), /Test Provider/);
+    assert.doesNotMatch(
+      copy.home.providerReady('Test Provider', 'private-model-id'),
+      /private-model-id/
+    );
+    assert.match(copy.chat.aiLabel('Test Provider', 'private-model-id'), /private-model-id/);
   }
 });

@@ -13,6 +13,7 @@ import {
   useWindowDimensions
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -471,12 +472,19 @@ export default function App() {
 
   const sendChat = () => {
     const text = chatDraft.trim();
+    if (pendingChatImage && !settings.supportsImages) {
+      setChatFailure({
+        status: 'unavailable',
+        reason: 'image-not-enabled',
+        configuredProviderId: settings.provider
+      });
+      return;
+    }
     if (
       (!text && !pendingChatImage) ||
       !chatLoadSettled ||
       chatInFlightRef.current ||
-      !settings.apiKey.trim() ||
-      (pendingChatImage && !settings.supportsImages)
+      !settings.apiKey.trim()
     ) {
       return;
     }
@@ -629,16 +637,24 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
         <StatusBar style="dark" />
+        <LinearGradient
+          colors={[colors.lavenderGlow, colors.background, colors.background]}
+          locations={[0, 0.31, 1]}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
+        />
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <AppHeader
-            stars={stars}
-            tagline={copy.brandTagline}
-            settingsAccessibility={copy.settingsAccessibility}
-            onSettings={() => setSettingsOpen(true)}
-          />
+          {surface === 'rewrite' ? (
+            <AppHeader
+              stars={stars}
+              tagline={copy.brandTagline}
+              settingsAccessibility={copy.settingsAccessibility}
+              onSettings={() => setSettingsOpen(true)}
+            />
+          ) : null}
 
           {surface === 'chat' ? (
             <MeloChat
@@ -681,32 +697,51 @@ export default function App() {
               </View>
 
               {step === 'home' ? (
-                <View style={styles.panel}>
+                <View style={styles.homeContent}>
                   <Text style={styles.heroTitle}>{copy.home.heroTitle}</Text>
                   <Text style={styles.bodyText}>{copy.home.body}</Text>
 
-                  <PrimaryButton label={copy.home.start} onPress={() => setStep('draft')} />
-                  <PrimaryButton
-                    label={copy.home.chat}
-                    variant="secondary"
-                    onPress={() => setSurface('chat')}
-                  />
-
-                  <View style={styles.statusCard}>
-                    <View style={[styles.statusDot, settings.apiKey ? styles.statusDotOnline : null]} />
-                    <View style={styles.statusCopy}>
-                      <Text style={styles.statusTitle}>{providerStatus}</Text>
-                      <Text style={styles.statusSub}>
-                        {settings.apiKey
-                          ? copy.home.aiStatus
-                          : copy.home.offlineStatus}
-                      </Text>
-                    </View>
+                  <View style={styles.homeActions}>
+                    <PrimaryButton label={copy.home.start} onPress={() => setStep('draft')} />
+                    <PrimaryButton
+                      label={copy.home.chat}
+                      variant="ghost"
+                      onPress={() => setSurface('chat')}
+                    />
                   </View>
 
-                  <View style={styles.noGuiltCard}>
-                    <Text style={styles.noGuiltTitle}>{copy.home.noGuiltTitle}</Text>
-                    <Text style={styles.noGuiltText}>{copy.home.noGuiltBody}</Text>
+                  <View style={styles.homeMetaList}>
+                    <View style={styles.homeMetaRow}>
+                      <View
+                        style={[
+                          styles.statusDot,
+                          settings.apiKey ? styles.statusDotConfigured : null
+                        ]}
+                      />
+                      <View style={styles.statusCopy}>
+                        <Text style={styles.homeMetaLabel}>{copy.home.connectionLabel}</Text>
+                        <Text style={styles.statusTitle}>{providerStatus}</Text>
+                        <Text style={styles.statusSub}>
+                          {settings.apiKey
+                            ? copy.home.aiStatus
+                            : copy.home.offlineStatus}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.homeMetaDivider} />
+
+                    <View style={styles.homeMetaRow}>
+                      <View style={styles.homeStarCount}>
+                        <Text style={styles.homeStarMark}>✦</Text>
+                        <Text style={styles.homeStarNumber}>{stars}</Text>
+                      </View>
+                      <View style={styles.statusCopy}>
+                        <Text style={styles.homeMetaLabel}>{copy.home.calmStarsLabel}</Text>
+                        <Text style={styles.noGuiltTitle}>{copy.home.noGuiltTitle}</Text>
+                        <Text style={styles.noGuiltText}>{copy.home.noGuiltBody}</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               ) : null}
@@ -982,10 +1017,12 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   starBadge: {
     height: 42,
-    minWidth: 58,
-    paddingHorizontal: 12,
-    borderRadius: 21,
-    backgroundColor: colors.yellow,
+    minWidth: 54,
+    paddingHorizontal: 10,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -996,7 +1033,7 @@ const styles = StyleSheet.create({
   settingsButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1009,17 +1046,9 @@ const styles = StyleSheet.create({
   petSection: { width: '100%', maxWidth: 600, alignItems: 'center', marginTop: 2, marginBottom: 12 },
   speechBubble: {
     maxWidth: 330,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: 15,
-    paddingVertical: 11,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 2
   },
   speechText: { color: colors.ink, textAlign: 'center', fontSize: 14, lineHeight: 20 },
   panel: {
@@ -1033,29 +1062,59 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
-    elevation: 3
+    shadowOpacity: 0.035,
+    shadowRadius: 12,
+    elevation: 1
   },
-  heroTitle: { color: colors.ink, fontSize: 28, lineHeight: 35, fontWeight: '800' },
-  bodyText: { color: colors.inkMuted, fontSize: 15, lineHeight: 22 },
-  bodyTextCentered: { color: colors.inkMuted, fontSize: 15, lineHeight: 22, textAlign: 'center' },
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    padding: 14,
+  homeContent: {
+    width: '100%',
+    maxWidth: 600,
+    paddingHorizontal: 4,
     gap: 12
   },
-  statusDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: colors.inkMuted },
-  statusDotOnline: { backgroundColor: colors.mintStrong },
+  homeActions: { gap: 10, marginTop: 4 },
+  heroTitle: { color: colors.ink, fontSize: 29, lineHeight: 35, fontWeight: '800', letterSpacing: -0.4 },
+  bodyText: { color: colors.inkMuted, fontSize: 15, lineHeight: 22 },
+  bodyTextCentered: { color: colors.inkMuted, fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  homeMetaList: {
+    marginTop: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: 15
+  },
+  homeMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 15,
+    gap: 12
+  },
+  homeMetaDivider: { height: 1, backgroundColor: colors.border, marginLeft: 38 },
+  homeMetaLabel: {
+    color: colors.primaryDark,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 2
+  },
+  statusDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.inkMuted, marginTop: 5 },
+  statusDotConfigured: { backgroundColor: colors.primary },
   statusCopy: { flex: 1 },
   statusTitle: { color: colors.ink, fontWeight: '800', fontSize: 14 },
   statusSub: { color: colors.inkMuted, fontSize: 12, lineHeight: 17, marginTop: 2 },
-  noGuiltCard: { backgroundColor: colors.mint, borderRadius: radius.md, padding: 14 },
-  noGuiltTitle: { color: colors.success, fontWeight: '800', fontSize: 14 },
-  noGuiltText: { color: colors.ink, fontSize: 12, lineHeight: 18, marginTop: 4 },
+  homeStarCount: {
+    minWidth: 28,
+    alignItems: 'center',
+    paddingTop: 1,
+    gap: 1
+  },
+  homeStarMark: { color: '#8A6B16', fontSize: 15, lineHeight: 17 },
+  homeStarNumber: { color: colors.ink, fontSize: 11, fontWeight: '800' },
+  noGuiltTitle: { color: colors.ink, fontWeight: '800', fontSize: 14 },
+  noGuiltText: { color: colors.inkMuted, fontSize: 12, lineHeight: 18, marginTop: 3 },
   progressRow: { flexDirection: 'row', gap: 6, marginBottom: 2 },
   progressDot: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.border },
   progressDotActive: { backgroundColor: colors.primary },
