@@ -74,6 +74,14 @@ interface UiCopy {
     title: string;
     safetyTitle: string;
     safetyBody: string;
+    providerFallbackTitle: string;
+    providerTimeoutBody: (provider: string) => string;
+    providerNetworkBody: (provider: string) => string;
+    providerHttpBody: (provider: string, status?: number) => string;
+    providerInvalidBody: (provider: string) => string;
+    providerConfigurationBody: (provider: string) => string;
+    providerUnsafeBody: (provider: string) => string;
+    providerDiagnostic: (status?: number, code?: string, requestId?: string) => string;
     before: string;
     after: string;
     rewardTitle: string;
@@ -95,6 +103,9 @@ interface UiCopy {
   };
   footer: {
     ai: (provider: string) => string;
+    configured: (provider: string) => string;
+    fallback: (provider: string) => string;
+    notSent: (provider: string) => string;
     offline: string;
   };
   settings: {
@@ -131,6 +142,8 @@ interface UiCopy {
     missingBaseUrlBody: string;
     unsafeUrlTitle: string;
     unsafeUrlBody: string;
+    unexpectedProviderHostTitle: string;
+    unexpectedProviderHostBody: string;
     missingModelTitle: string;
     missingModelBody: string;
     keyClearedTitle: string;
@@ -231,6 +244,24 @@ const translations: Record<UILanguage, UiCopy> = {
       title: 'A calmer version',
       safetyTitle: 'Please get real-world support now',
       safetyBody: 'Contact someone you trust or local emergency services. Melo is not a crisis service, diagnosis tool or replacement for professional support.',
+      providerFallbackTitle: 'AI rewrite did not complete',
+      providerTimeoutBody: (provider) => `${provider} did not finish within 30 seconds. Melo used the offline rewrite below instead.`,
+      providerNetworkBody: (provider) => `Melo could not reach ${provider}. Check this device’s network and the selected region/server. The result below is an offline rewrite.`,
+      providerHttpBody: (provider, status) => {
+        if (status === 401 || status === 403) return `${provider} rejected the key or its permissions. Check the key, plan and region/server.`;
+        if (status === 404) return `${provider} could not find the endpoint or model. Check the Base URL and exact Model ID.`;
+        if (status === 429) return `${provider} rate-limited the request or the account quota is unavailable. Check the provider console.`;
+        if (status && status >= 500) return `${provider} reported a temporary server error. Try again or choose another region/server.`;
+        return `${provider} rejected the request${status ? ` with HTTP ${status}` : ''}. Check the key, plan, region/server and Model ID.`;
+      },
+      providerInvalidBody: (provider) => `${provider} responded, but its OpenAI-compatible response contained no complete, readable message. Check the model and endpoint.`,
+      providerConfigurationBody: (provider) => `The saved ${provider} settings are incomplete or invalid. No provider request was sent.`,
+      providerUnsafeBody: (provider) => `${provider} returned a response that did not pass Melo’s prototype safety check. The result below is an offline rewrite.`,
+      providerDiagnostic: (status, code, requestId) => [
+        status ? `HTTP ${status}` : '',
+        code ? `Code ${code}` : '',
+        requestId ? `Request ID ${requestId}` : ''
+      ].filter(Boolean).join(' · '),
       before: 'Before',
       after: 'After',
       rewardTitle: '✦ Calm Star earned',
@@ -252,6 +283,9 @@ const translations: Record<UILanguage, UiCopy> = {
     },
     footer: {
       ai: (provider) => `Prototype only · No diagnosis · This draft is sent to ${provider}`,
+      configured: (provider) => `Prototype only · ${provider} is configured · A draft is sent only when you request a rewrite`,
+      fallback: (provider) => `Attempt to ${provider} did not produce this result · This result is Melo’s local fallback`,
+      notSent: (provider) => `${provider} settings need attention · No provider request was sent · This result is Melo’s local fallback`,
       offline: 'Prototype only · No diagnosis · Offline mode makes no provider request'
     },
     settings: {
@@ -288,6 +322,8 @@ const translations: Record<UILanguage, UiCopy> = {
       missingBaseUrlBody: 'Please enter an OpenAI-compatible Base URL.',
       unsafeUrlTitle: 'Unsafe Base URL',
       unsafeUrlBody: 'Use HTTPS for remote providers. Plain HTTP is allowed only for localhost development.',
+      unexpectedProviderHostTitle: 'Provider and server do not match',
+      unexpectedProviderHostBody: 'Use this provider’s official server, or choose Custom API for another OpenAI-compatible endpoint.',
       missingModelTitle: 'Missing model',
       missingModelBody: 'Please enter the model ID used by your provider.',
       keyClearedTitle: 'API key cleared',
@@ -383,6 +419,24 @@ const translations: Record<UILanguage, UiCopy> = {
       title: '更冷靜的版本',
       safetyTitle: '請立即尋求現實世界的支援',
       safetyBody: '請聯絡你信任的人或當地緊急服務。Melo 不是危機服務、診斷工具，也不能取代專業支援。',
+      providerFallbackTitle: 'AI 改寫未完成',
+      providerTimeoutBody: (provider) => `${provider} 未能在 30 秒內完成。Melo 已改用下方的離線改寫。`,
+      providerNetworkBody: (provider) => `Melo 無法連接 ${provider}。請檢查這部裝置的網絡及所選地區／伺服器；下方結果由離線改寫產生。`,
+      providerHttpBody: (provider, status) => {
+        if (status === 401 || status === 403) return `${provider} 拒絕了 key 或其權限。請檢查 key、方案及地區／伺服器。`;
+        if (status === 404) return `${provider} 找不到 endpoint 或模型。請檢查 Base URL 及準確的模型 ID。`;
+        if (status === 429) return `${provider} 已限制請求速率，或帳戶額度暫不可用。請檢查供應商控制台。`;
+        if (status && status >= 500) return `${provider} 回報暫時性伺服器錯誤。請重試或選擇另一地區／伺服器。`;
+        return `${provider} 拒絕了請求${status ? `（HTTP ${status}）` : ''}。請檢查 key、方案、地區／伺服器及模型 ID。`;
+      },
+      providerInvalidBody: (provider) => `${provider} 已回應，但其 OpenAI-compatible 回覆中沒有完整、可讀的訊息。請檢查模型及 endpoint。`,
+      providerConfigurationBody: (provider) => `已儲存的 ${provider} 設定不完整或無效；本次沒有向供應商發出請求。`,
+      providerUnsafeBody: (provider) => `${provider} 的回覆未通過 Melo 的原型安全檢查；下方結果由離線改寫產生。`,
+      providerDiagnostic: (status, code, requestId) => [
+        status ? `HTTP ${status}` : '',
+        code ? `錯誤碼 ${code}` : '',
+        requestId ? `請求 ID ${requestId}` : ''
+      ].filter(Boolean).join(' · '),
       before: '改寫前',
       after: '改寫後',
       rewardTitle: '✦ 獲得一顆 Calm Star',
@@ -404,6 +458,9 @@ const translations: Record<UILanguage, UiCopy> = {
     },
     footer: {
       ai: (provider) => `僅供原型示範 · 不作診斷 · 草稿會傳送至 ${provider}`,
+      configured: (provider) => `僅供原型示範 · 已設定 ${provider} · 只會在要求改寫時傳送草稿`,
+      fallback: (provider) => `嘗試連接 ${provider} 未產生本結果 · 本結果由 Melo 本機後備方案產生`,
+      notSent: (provider) => `${provider} 設定需要修正 · 本次沒有向供應商發出請求 · 本結果由 Melo 本機後備方案產生`,
       offline: '僅供原型示範 · 不作診斷 · 離線模式不會連接供應商'
     },
     settings: {
@@ -440,6 +497,8 @@ const translations: Record<UILanguage, UiCopy> = {
       missingBaseUrlBody: '請輸入 OpenAI-compatible Base URL。',
       unsafeUrlTitle: 'Base URL 不安全',
       unsafeUrlBody: '遠端供應商必須使用 HTTPS；只有 localhost 開發環境可使用 HTTP。',
+      unexpectedProviderHostTitle: '供應商與伺服器不相符',
+      unexpectedProviderHostBody: '請使用這個供應商的官方伺服器；如要連接其他 OpenAI-compatible endpoint，請選擇自訂 API。',
       missingModelTitle: '缺少模型',
       missingModelBody: '請輸入供應商使用的模型 ID。',
       keyClearedTitle: 'API key 已清除',
@@ -541,6 +600,24 @@ const translations: Record<UILanguage, UiCopy> = {
       title: '更冷静的版本',
       safetyTitle: '请立即寻求现实世界的支持',
       safetyBody: '请联系你信任的人或当地紧急服务。Melo 不是危机服务、诊断工具，也不能取代专业支持。',
+      providerFallbackTitle: 'AI 改写未完成',
+      providerTimeoutBody: (provider) => `${provider} 未能在 30 秒内完成。Melo 已改用下方的离线改写。`,
+      providerNetworkBody: (provider) => `Melo 无法连接 ${provider}。请检查这台设备的网络及所选地区／服务器；下方结果由离线改写生成。`,
+      providerHttpBody: (provider, status) => {
+        if (status === 401 || status === 403) return `${provider} 拒绝了 key 或其权限。请检查 key、方案及地区／服务器。`;
+        if (status === 404) return `${provider} 找不到 endpoint 或模型。请检查 Base URL 及准确的模型 ID。`;
+        if (status === 429) return `${provider} 已限制请求速率，或账户额度暂不可用。请检查服务商控制台。`;
+        if (status && status >= 500) return `${provider} 返回暂时性服务器错误。请重试或选择另一地区／服务器。`;
+        return `${provider} 拒绝了请求${status ? `（HTTP ${status}）` : ''}。请检查 key、方案、地区／服务器及模型 ID。`;
+      },
+      providerInvalidBody: (provider) => `${provider} 已响应，但其 OpenAI-compatible 回复中没有完整、可读的信息。请检查模型及 endpoint。`,
+      providerConfigurationBody: (provider) => `已保存的 ${provider} 设置不完整或无效；本次没有向服务商发送请求。`,
+      providerUnsafeBody: (provider) => `${provider} 的回复未通过 Melo 的原型安全检查；下方结果由离线改写生成。`,
+      providerDiagnostic: (status, code, requestId) => [
+        status ? `HTTP ${status}` : '',
+        code ? `错误码 ${code}` : '',
+        requestId ? `请求 ID ${requestId}` : ''
+      ].filter(Boolean).join(' · '),
       before: '改写前',
       after: '改写后',
       rewardTitle: '✦ 获得一颗 Calm Star',
@@ -562,6 +639,9 @@ const translations: Record<UILanguage, UiCopy> = {
     },
     footer: {
       ai: (provider) => `仅供原型演示 · 不作诊断 · 草稿会发送至 ${provider}`,
+      configured: (provider) => `仅供原型演示 · 已设置 ${provider} · 只会在请求改写时发送草稿`,
+      fallback: (provider) => `尝试连接 ${provider} 未生成本结果 · 本结果由 Melo 本地后备方案生成`,
+      notSent: (provider) => `${provider} 设置需要修正 · 本次没有向服务商发送请求 · 本结果由 Melo 本地后备方案生成`,
       offline: '仅供原型演示 · 不作诊断 · 离线模式不会连接服务商'
     },
     settings: {
@@ -598,6 +678,8 @@ const translations: Record<UILanguage, UiCopy> = {
       missingBaseUrlBody: '请输入 OpenAI-compatible Base URL。',
       unsafeUrlTitle: 'Base URL 不安全',
       unsafeUrlBody: '远程服务商必须使用 HTTPS；只有 localhost 开发环境可使用 HTTP。',
+      unexpectedProviderHostTitle: '服务商与服务器不相符',
+      unexpectedProviderHostBody: '请使用这个服务商的官方服务器；如需连接其他 OpenAI-compatible endpoint，请选择自定义 API。',
       missingModelTitle: '缺少模型',
       missingModelBody: '请输入服务商使用的模型 ID。',
       keyClearedTitle: 'API key 已清除',

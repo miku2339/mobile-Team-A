@@ -80,7 +80,9 @@ Melo rewards positive actions without punishing absence.
 - Before/After review, visible Copy feedback and a deterministic group-project demo
 - Responsive 320 px layouts, cross-platform safe areas and Reduce Motion support
 - Copy and native Share actions
-- Offline rewrite fallback when no API key is available
+- Offline rewrite fallback when no API key is available or a provider request fails
+- Provider results are labelled as AI only after a readable model response is received
+- 30-second provider timeout with distinct timeout, network, HTTP, invalid-response and local-configuration diagnostics
 - Basic prototype safety keyword guard
 - Native secure settings storage through Expo SecureStore
 - Web session-only API settings storage
@@ -130,13 +132,16 @@ npx expo-doctor
 Verified on this branch on 4 August 2026:
 
 - TypeScript type-check passes;
-- all 19 deterministic regression tests pass;
+- all 33 deterministic regression tests pass;
 - Expo Doctor passes all 18 SDK 54 checks;
 - Web, iOS and Android production exports complete successfully;
 - the complete offline golden path was exercised at a 390 × 844 mobile viewport, including three interface languages, provider selection, Alibaba plan/region switching, Before/After, Copy feedback and Calm Stars;
+- a rendered provider flow accepted one deliberately delayed OpenAI-compatible response after 9 seconds, proving it is no longer cut off by the old 8-second timeout; exactly one POST was made for the run;
+- a rendered HTTP 500 flow showed `Offline fallback`, `AI rewrite did not complete` and `HTTP 500`, instead of presenting the deterministic template as model output;
 - one explicitly authorised Alibaba Cloud Coding Plan China smoke test passed through Melo's real `rewriteMessage` adapter with `qwen3-coder-plus`, a synthetic non-sensitive draft and `source: ai` rather than fallback. No credential was written to the repository or documentation.
+- Computer Use then exercised the complete native iOS Simulator UI twice against an already configured, explicitly authorised Alibaba Coding Plan account. Gentle and Direct produced visibly different Traditional Chinese drafts; the result badge named Alibaba Coding Plan, while Metro logged exactly one `provider rewrite succeeded` entry per run with output lengths 62 and 53. The saved key was neither read nor displayed.
 
-These checks prove source/offline-demo readiness and the provider adapter's real-account path. A physical-device Expo Go run and the combined on-device provider UI flow still require visible confirmation.
+These checks prove source/offline-demo readiness and the native simulator provider UI path. A physical-device Expo Go provider run on a teammate's own network still requires visible confirmation.
 
 ## AI Provider Setup
 
@@ -184,6 +189,23 @@ The selected service therefore needs to provide an OpenAI-compatible Chat Comple
 
 Provider regions, accounts and workspaces may require a different Base URL or model name. Both fields remain editable inside the app.
 
+For a named provider, Melo accepts only that provider's official compatible hosts; use **Custom API** for any other compatible service. The adapter also accepts either a Base URL or a complete `/chat/completions` endpoint without duplicating the path. A response explicitly marked as truncated or otherwise unfinished is not presented as successful AI output.
+
+### Provider-result truth and diagnostics
+
+Melo waits up to 30 seconds for a provider request. It displays the selected provider badge only when the response contains a readable Chat Completions message. A local template is always labelled **Offline fallback** and never attributed to the selected provider.
+
+Failed requests are separated into:
+
+- local configuration errors, where no network request was sent;
+- device/network reachability errors;
+- provider timeout;
+- HTTP rejection, including the safe status number and a strictly validated provider error code when available;
+- an empty or incompatible successful response;
+- a response rejected by the prototype output guard.
+
+Raw provider bodies, error messages, drafts, API keys and authorization headers are not copied into the result or diagnostic log. A safe request ID may be shown so the user can trace the request with the provider.
+
 ### Important API-key rule
 
 **Never commit a real API key to GitHub, source code, screenshots, issues or documentation.**
@@ -201,13 +223,15 @@ The provider flow is inspired by the separation used in Qoder's BYOK custom-mode
 
 The app remains demonstrable without an API key or stable internet connection.
 
-When an AI request is unavailable, Melo uses a local multilingual template that:
+When an AI request is unavailable, Melo uses a deterministic local multilingual template that:
 
 - converts blame into a first-person feeling statement;
 - keeps the wording calm and concise;
 - ends with a clear request or next step.
 
 This fallback is important for a live competition demo because the core user journey still works if Wi-Fi, quota or provider availability fails.
+
+Because this fallback is deterministic, similar inputs can produce the same wording. The result screen therefore states whether the text came from the provider or from Melo's local fallback.
 
 ## Suggested Live Demo
 

@@ -148,6 +148,7 @@ export default function App() {
   const [language, setLanguage] = useState<AppLanguage>('en');
   const [pauseSeconds, setPauseSeconds] = useState(12);
   const [generating, setGenerating] = useState(false);
+  const generationInFlightRef = useRef(false);
   const [result, setResult] = useState<RewriteResult | null>(null);
   const [rewardedThisRun, setRewardedThisRun] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -199,6 +200,12 @@ export default function App() {
   const resultProviderName = result?.providerId
     ? copy.providerNames[result.providerId]
     : null;
+  const attemptedProviderName = result?.attemptedProviderId
+    ? copy.providerNames[result.attemptedProviderId]
+    : null;
+  const configuredProviderName = result?.configuredProviderId
+    ? copy.providerNames[result.configuredProviderId]
+    : null;
   const sourceLabel = result
     ? result.source === 'ai'
       ? resultProviderName ?? result.providerLabel
@@ -217,11 +224,47 @@ export default function App() {
           ? copy.result.safetyFallbackReasons
           : copy.result.fallbackReasons
     : [];
-  const footerProviderName =
-    step === 'result' && resultProviderName
-      ? resultProviderName
-      : providerName;
-  const footerUsesProvider = Boolean(result?.providerId) || settings.apiKey.trim().length > 0;
+  const providerFallbackBody = (() => {
+    if (result?.source !== 'fallback') return null;
+    const fallbackProviderName = attemptedProviderName ?? configuredProviderName;
+    if (!fallbackProviderName) return null;
+    switch (result.fallbackReason) {
+      case 'timeout':
+        return copy.result.providerTimeoutBody(fallbackProviderName);
+      case 'network-error':
+        return copy.result.providerNetworkBody(fallbackProviderName);
+      case 'http-error':
+        return copy.result.providerHttpBody(fallbackProviderName, result.providerHttpStatus);
+      case 'invalid-response':
+        return copy.result.providerInvalidBody(fallbackProviderName);
+      case 'configuration-error':
+        return copy.result.providerConfigurationBody(fallbackProviderName);
+      case 'unsafe-output':
+        return copy.result.providerUnsafeBody(fallbackProviderName);
+      default:
+        return null;
+    }
+  })();
+  const providerDiagnostic =
+    result?.source === 'fallback'
+      ? copy.result.providerDiagnostic(
+          result.providerHttpStatus,
+          result.providerErrorCode,
+          result.providerRequestId
+        )
+      : '';
+  const footerText =
+    step === 'result' && result
+      ? result.source === 'ai' && resultProviderName
+        ? copy.footer.ai(resultProviderName)
+        : attemptedProviderName
+          ? copy.footer.fallback(attemptedProviderName)
+          : configuredProviderName
+            ? copy.footer.notSent(configuredProviderName)
+          : copy.footer.offline
+      : settings.apiKey.trim()
+        ? copy.footer.configured(providerName)
+        : copy.footer.offline;
 
   const resetRun = () => {
     setDraft('');
@@ -244,7 +287,8 @@ export default function App() {
   };
 
   const generate = async () => {
-    if (generating) return;
+    if (generationInFlightRef.current) return;
+    generationInFlightRef.current = true;
     try {
       setGenerating(true);
       const next = await rewriteMessage(settings, {
@@ -266,6 +310,7 @@ export default function App() {
     } catch {
       Alert.alert(copy.common.errorTitle, copy.common.errorBody);
     } finally {
+      generationInFlightRef.current = false;
       setGenerating(false);
     }
   };
@@ -491,7 +536,6 @@ export default function App() {
                 loading={generating}
                 onPress={() => {
                   setPauseSeconds(0);
-                  void generate();
                 }}
               />
               <PrimaryButton
@@ -513,12 +557,14 @@ export default function App() {
                 <View
                   style={[
                     styles.sourceBadge,
+                    result.source === 'fallback' && styles.sourceBadgeWarning,
                     result.source === 'safety' && styles.sourceBadgeDanger
                   ]}
                 >
                   <Text
                     style={[
                       styles.sourceText,
+                      result.source === 'fallback' && styles.sourceTextWarning,
                       result.source === 'safety' && styles.sourceTextDanger
                     ]}
                   >
@@ -531,6 +577,18 @@ export default function App() {
                 <View style={styles.safetyCard}>
                   <Text style={styles.safetyTitle}>{copy.result.safetyTitle}</Text>
                   <Text style={styles.safetyBody}>{copy.result.safetyBody}</Text>
+                </View>
+              ) : null}
+
+              {providerFallbackBody ? (
+                <View style={styles.providerFallbackCard}>
+                  <Text style={styles.providerFallbackTitle}>{copy.result.providerFallbackTitle}</Text>
+                  <Text style={styles.providerFallbackBody}>{providerFallbackBody}</Text>
+                  {providerDiagnostic ? (
+                    <Text selectable style={styles.providerFallbackDiagnostic}>
+                      {providerDiagnostic}
+                    </Text>
+                  ) : null}
                 </View>
               ) : null}
 
@@ -587,9 +645,7 @@ export default function App() {
           ) : null}
 
           <Text style={styles.footerNote}>
-            {footerUsesProvider
-              ? copy.footer.ai(footerProviderName)
-              : copy.footer.offline}
+            {footerText}
           </Text>
         </ScrollView>
         </KeyboardAvoidingView>
@@ -735,12 +791,24 @@ const styles = StyleSheet.create({
   resultHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   resultTitleCopy: { flex: 1, minWidth: 210 },
   sourceBadge: { backgroundColor: colors.mint, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 7 },
+  sourceBadgeWarning: { backgroundColor: colors.peach },
   sourceBadgeDanger: { backgroundColor: colors.dangerSoft },
   sourceText: { color: colors.success, fontWeight: '800', fontSize: 11 },
+  sourceTextWarning: { color: colors.peachStrong },
   sourceTextDanger: { color: colors.danger },
   safetyCard: { backgroundColor: colors.dangerSoft, borderRadius: radius.md, padding: 15 },
   safetyTitle: { color: colors.danger, fontWeight: '900', fontSize: 15 },
   safetyBody: { color: colors.ink, fontSize: 13, lineHeight: 19, marginTop: 4 },
+  providerFallbackCard: { backgroundColor: colors.peach, borderRadius: radius.md, padding: 15 },
+  providerFallbackTitle: { color: colors.peachStrong, fontWeight: '900', fontSize: 15 },
+  providerFallbackBody: { color: colors.ink, fontSize: 13, lineHeight: 19, marginTop: 4 },
+  providerFallbackDiagnostic: {
+    color: colors.inkMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 7,
+    fontWeight: '700'
+  },
   beforeCard: { backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: 15 },
   beforeText: { color: colors.inkMuted, fontSize: 15, lineHeight: 22 },
   resultCard: { backgroundColor: colors.primarySoft, borderRadius: radius.md, padding: 17 },

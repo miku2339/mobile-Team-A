@@ -24,7 +24,10 @@ import {
 import { getTranslations, uiLanguageOptions } from '../i18n';
 import { colors, radius } from '../theme';
 import type { AISettings, ProviderId, UILanguage } from '../types';
-import { isAllowedProviderBaseUrl } from '../utils/providerUrl';
+import {
+  isAllowedProviderBaseUrl,
+  isAllowedProviderEndpoint
+} from '../utils/providerUrl';
 import {
   selectAlibabaRegionSettings,
   selectProviderSettings
@@ -166,6 +169,13 @@ export function AISettingsModal({
     }
     if (!isAllowedProviderBaseUrl(draft.baseUrl)) {
       Alert.alert(copy.settings.unsafeUrlTitle, copy.settings.unsafeUrlBody);
+      return;
+    }
+    if (!isAllowedProviderEndpoint(draft.provider, draft.baseUrl)) {
+      Alert.alert(
+        copy.settings.unexpectedProviderHostTitle,
+        copy.settings.unexpectedProviderHostBody
+      );
       return;
     }
     if (!draft.model.trim()) {
