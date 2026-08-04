@@ -228,7 +228,7 @@ const commonProviderNames: Record<ProviderId, string> = {
   bailian: 'Alibaba Cloud · Pay-as-you-go',
   'bailian-coding': 'Alibaba Cloud · Coding Plan',
   'bailian-token': 'Alibaba Cloud · Token Plan',
-  bigmodel: '智譜 BigModel',
+  bigmodel: 'Z.ai BigModel',
   custom: 'Custom API'
 };
 
@@ -457,7 +457,7 @@ const translations: Record<UILanguage, UiCopy> = {
       bailian: 'Standard pay-as-you-go API for custom applications in China (Beijing).',
       'bailian-coding': 'Coding Plan endpoint for China. Requires its dedicated sk-sp- key.',
       'bailian-token': 'Token Plan endpoint for China (Beijing). Requires its dedicated plan key.',
-      bigmodel: 'Zhipu OpenAI-compatible endpoint.',
+      bigmodel: 'Z.ai OpenAI-compatible endpoint.',
       custom: 'Any API that supports OpenAI-compatible /chat/completions.'
     },
     regions: {
@@ -686,6 +686,7 @@ const translations: Record<UILanguage, UiCopy> = {
       bailian: '阿里雲 · 按量付費',
       'bailian-coding': '阿里雲 · Coding Plan',
       'bailian-token': '阿里雲 · Token Plan',
+      bigmodel: '智譜 BigModel',
       custom: '自訂相容服務'
     },
     providerNotes: {

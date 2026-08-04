@@ -96,7 +96,7 @@ Melo rewards positive actions without punishing absence.
 - Alibaba Cloud Model Studio / Bailian with separate Pay-as-you-go, Coding Plan and Token Plan menus
 - Alibaba Cloud plan-aware region/server selection
 - DeepSeek, Kimi and MiniMax compatible endpoint presets
-- Zhipu AI BigModel endpoint preset
+- Z.ai BigModel endpoint preset
 - User-configured OpenAI-compatible endpoint
 - User-editable API key, Base URL and model ID
 - English, Traditional Chinese and Simplified Chinese interface switching
@@ -189,7 +189,7 @@ Configured provider endpoints:
 | [DeepSeek](https://api-docs.deepseek.com/) | `https://api.deepseek.com` | User supplied |
 | [Kimi](https://platform.kimi.com/docs/overview) | `https://api.moonshot.cn/v1` | User supplied |
 | [MiniMax](https://platform.minimaxi.com/docs/api-reference/text-chat-openai) | `https://api.minimaxi.com/v1` | User supplied |
-| Zhipu AI BigModel | `https://open.bigmodel.cn/api/paas/v4` | User supplied |
+| Z.ai BigModel | `https://open.bigmodel.cn/api/paas/v4` | User supplied |
 | Custom provider | User supplied | User supplied |
 
 ### Alibaba Cloud plan and region selection

@@ -108,6 +108,12 @@ test('DeepSeek, Kimi and MiniMax presets use official compatible endpoints witho
   );
 });
 
+test('BigModel preset uses the Z.ai English brand without changing its provider ID', () => {
+  assert.equal(PROVIDERS.bigmodel.id, 'bigmodel');
+  assert.equal(PROVIDERS.bigmodel.label, 'Z.ai BigModel');
+  assert.equal(PROVIDERS.bigmodel.baseUrl, 'https://open.bigmodel.cn/api/paas/v4');
+});
+
 test('Alibaba plan-key family is kept separate from pay-as-you-go keys', () => {
   assert.equal(isAlibabaKeyCompatible('bailian', 'sk-standard-key'), true);
   assert.equal(isAlibabaKeyCompatible('bailian', 'sk-sp-plan-key'), false);
