@@ -4,7 +4,7 @@
 
 > Imagine a student working on a group project. The workload feels unfair, they are overwhelmed, and they type: “You never do any work. I am done with this group project.” The concern may be real, but sending it at the emotional peak can turn a solvable problem into a damaged relationship.
 
-> Students do not always need another chatbot. Sometimes they need a small interruption between feeling and sending.
+> Students do not always need an open-ended therapy chatbot. Sometimes they need a small interruption between feeling and sending.
 
 ## 0:45–1:30 — The solution
 
@@ -45,7 +45,9 @@
 
 > Provider settings follow a Bring Your Own Key model. Melo does not provide API keys, model access, credits or a default model. The user selects a provider and enters the exact Model ID. Presets include OpenAI, Google AI Studio, DeepSeek, Kimi, MiniMax and Zhipu. Alibaba Cloud adds two explicit levels: billing plan and region/server; changing either clears the previous key, while Alibaba Cloud performs the final plan and region authorisation check.
 
-> Keys are not committed to source code. Native builds store settings in Expo SecureStore; the Web preview keeps sensitive provider settings only for the browser session.
+> Melo Chat reuses the same provider transport but never invents an offline assistant reply. It stores only the newest 24 messages on the device, sends at most the latest 8 per turn, labels every successful bubble with its provider and model, and lets the model choose only one of five validated Melo expressions.
+
+> Keys are not committed to source code. Native builds store settings and bounded Chat text in Expo SecureStore; the Web preview keeps sensitive provider settings only for the browser session.
 
 ## 7:00–8:00 — Impact and usefulness
 
@@ -75,7 +77,7 @@ The same user flow returns a labelled deterministic offline rewrite. The app nev
 
 ### How do you protect private messages?
 
-Offline mode makes no provider request. AI mode names the selected provider before generation. The prototype does not create a message-history database, but a production version still needs a backend, consent and retention controls.
+Offline Guided Rewrite makes no provider request. AI mode names the selected provider before generation. Melo Chat keeps only a bounded device-local history with a clear action; it has no account or cloud history. A production version still needs a backend, consent and retention controls.
 
 ### Is the safety system reliable?
 

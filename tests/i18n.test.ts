@@ -53,3 +53,23 @@ test('offline rewrite supports Simplified Chinese output', () => {
   assert.match(result, /重新确认分工/);
   assert.doesNotMatch(result, /重新確認/);
 });
+
+test('Melo chat has complete session, safety and provider states in every UI language', () => {
+  for (const language of ['en', 'zh-Hant', 'zh-Hans'] as const) {
+    const copy = getTranslations(language);
+    assert.ok(copy.home.chat.length > 0);
+    assert.equal(copy.chat.title, 'Melo');
+    assert.equal(copy.chat.quickPrompts.length, 2);
+    assert.match(copy.chat.aiMode('Test Provider'), /Test Provider/);
+    assert.match(
+      copy.chat.aiLabel('Test Provider', 'test-model'),
+      /Test Provider.*test-model/
+    );
+    assert.match(copy.chat.httpBody('Test Provider', 429), /Test Provider/);
+    assert.ok(copy.chat.sessionNotice.length > 0);
+    assert.ok(copy.chat.notTherapyNotice.length > 0);
+    assert.ok(copy.chat.memoryUnavailable.length > 0);
+    assert.ok(copy.chat.memoryLoading.length > 0);
+    assert.ok(copy.chat.clearConfirmBody.length > 0);
+  }
+});

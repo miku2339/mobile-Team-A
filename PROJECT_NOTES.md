@@ -56,4 +56,4 @@
 - 安全 guard 只是關鍵字規則，不是可靠的危機識別模型
 - 寵物成長目前只有星星和三個簡單配件階段
 - 已加入核心純邏輯測試；仍未加入 backend、帳戶、資料庫或分析儀表板
-- Coding Plan／Token Plan 只應按阿里雲官方允許的工具範圍使用；Melo 會顯示警告但不替用戶確認帳戶授權
+- Coding Plan／Token Plan 使用各自專屬 key 與地區 endpoint；Melo 只做類別配對，實際帳戶授權仍由阿里雲驗證

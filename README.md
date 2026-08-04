@@ -4,10 +4,11 @@
 
 Melo is a **React Native + Expo mental-wellness prototype** that helps students pause before sending an emotional message, identify what they are feeling, and rewrite the message in a calmer, clearer and more constructive way.
 
-The project combines two ideas:
+The project combines three ideas:
 
 1. **Healthy communication support** — turning an impulsive draft into a message that expresses feelings, avoids blame and suggests a practical next step.
 2. **A supportive virtual pet** — Melo guides the user through the pause, celebrates positive actions and makes the experience feel friendly rather than clinical.
+3. **Melo Chat** — a provider-backed conversation surface where the same Melo personality can listen, reflect and help the user choose one manageable next step.
 
 > **Melo does not replace human connection. It creates a small pause that can protect that connection.**
 
@@ -40,6 +41,24 @@ This is a **functional competition prototype**, not a therapy, diagnosis or cris
 
 The user can then copy, share, retry with another tone or start again.
 
+## Melo Chat
+
+Melo Chat is a ChatGPT-style conversation surface with Melo's own bounded personality. It is not an offline response generator: Chat becomes available only after the user configures their own compatible provider account, API key and exact Model ID. If that request fails, the failed turn is shown honestly and no made-up assistant reply is appended.
+
+Conversation context is intentionally local and bounded:
+
+- the newest **24 messages** are stored only on the current device or browser;
+- each provider request sends at most the latest **8 conversation messages**, plus Melo's system instructions;
+- native iOS and Android message text is stored with Expo SecureStore using a this-device-only accessibility class;
+- Web uses that browser's local storage;
+- there is no account, cloud history or cross-device sync, and the user can clear the local conversation from Chat.
+
+Image input is opt-in at the **model level**. The user must turn on “this model accepts image input” only when their exact selected model supports OpenAI-compatible image content. Melo resizes and normalises selected images locally before a request; an image is never attached merely because the provider brand might offer some vision models.
+
+Each successful AI bubble records the provider and model that produced that reply. When the compatible response names the served model, Melo keeps that value; otherwise it keeps the exact Model ID sent in the request. This attribution stays with the stored message even if the user changes settings later.
+
+For each successful reply, the model may also choose one expression from a strict whitelist: `calm`, `listening`, `thinking`, `encouraging` or `concerned`. The app maps that value to the same animated Melo pet used on Home. The model cannot send arbitrary animation instructions, styles or code; unrecognised values fall back safely.
+
 ## Why a Virtual Pet?
 
 Melo is not only a decorative mascot. The pet acts as a low-pressure guide throughout the wellness flow:
@@ -67,7 +86,12 @@ Melo rewards positive actions without punishing absence.
 - Twelve-second guided breathing interaction
 - Calm Stars and simple accessory progression
 - AI-assisted message rewriting
-- Bring Your Own Key (**BYOK**) provider settings; Melo provides no model service, key, credits or default model
+- Provider-backed Melo Chat with a familiar message-bubble composer and real conversation context
+- Provider and model attribution saved on every successful AI reply
+- Device-local bounded Chat history: newest 24 messages stored locally, latest 8 sent per provider turn
+- Optional image attachments only after the user marks the exact model as image-capable
+- Model-selected Melo expressions constrained to five app-controlled states
+- Bring Your Own Key (**BYOK**) provider settings; Melo provides no model service, key, credits or active default provider/model
 - OpenAI and Google AI Studio connection presets for compatible Chat Completions endpoints
 - Alibaba Cloud Model Studio / Bailian with separate Pay-as-you-go, Coding Plan and Token Plan menus
 - Alibaba Cloud plan-aware region/server selection
@@ -80,7 +104,7 @@ Melo rewards positive actions without punishing absence.
 - Before/After review, visible Copy feedback and a deterministic group-project demo
 - Responsive 320 px layouts, cross-platform safe areas and Reduce Motion support
 - Copy and native Share actions
-- Offline rewrite fallback when no API key is available or a provider request fails
+- Offline fallback for the Guided Rewrite flow when no API key is available or a provider request fails; Melo Chat never fabricates an offline assistant reply
 - Provider results are labelled as AI only after a readable model response is received
 - 30-second provider timeout with distinct timeout, network, HTTP, invalid-response and local-configuration diagnostics
 - Basic prototype safety keyword guard
@@ -132,7 +156,7 @@ npx expo-doctor
 Verified on this branch on 4 August 2026:
 
 - TypeScript type-check passes;
-- all 33 deterministic regression tests pass;
+- the deterministic regression suite passes, including provider truth, bounded Chat context, local persistence, safety-boundary and image-capability cases;
 - Expo Doctor passes all 18 SDK 54 checks;
 - Web, iOS and Android production exports complete successfully;
 - the complete offline golden path was exercised at a 390 × 844 mobile viewport, including three interface languages, provider selection, Alibaba plan/region switching, Before/After, Copy feedback and Calm Stars;
@@ -140,6 +164,7 @@ Verified on this branch on 4 August 2026:
 - a rendered HTTP 500 flow showed `Offline fallback`, `AI rewrite did not complete` and `HTTP 500`, instead of presenting the deterministic template as model output;
 - one explicitly authorised Alibaba Cloud Coding Plan China smoke test passed through Melo's real `rewriteMessage` adapter with `qwen3-coder-plus`, a synthetic non-sensitive draft and `source: ai` rather than fallback. No credential was written to the repository or documentation.
 - Computer Use then exercised the complete native iOS Simulator UI twice against an already configured, explicitly authorised Alibaba Coding Plan account. Gentle and Direct produced visibly different Traditional Chinese drafts; the result badge named Alibaba Coding Plan, while Metro logged exactly one `provider rewrite succeeded` entry per run with output lengths 62 and 53. The saved key was neither read nor displayed.
+- Computer Use also exercised multi-turn Melo Chat through the same authorised Simulator account with `qwen3.7-plus`. The provider returned context-aware, non-identical replies and selected the `encouraging` expression; each new bubble showed `AI · Alibaba Cloud · Coding Plan · qwen3.7-plus`, Metro logged one successful request with the same model/expression, and a full app reload restored the locally stored conversation and attribution.
 
 These checks prove source/offline-demo readiness and the native simulator provider UI path. A physical-device Expo Go provider run on a teammate's own network still requires visible confirmation.
 
@@ -150,8 +175,9 @@ Open the gear icon in the top-right corner of the app. Following a BYOK connecti
 - **API key**
 - **Base URL**
 - **Model ID**
+- whether that exact model **supports image input**
 
-Melo only supplies endpoint presets. It does **not** supply a model, API key, credits, proxy or default Model ID.
+Melo only supplies endpoint presets. It does **not** supply or activate a provider account, model, API key, credits, proxy or default Model ID. The initially visible provider preset is not a configured service: the user must make and save an explicit connection choice.
 
 Configured provider endpoints:
 
@@ -173,11 +199,11 @@ Alibaba Cloud is deliberately split into two selectors:
 1. **Plan:** Pay-as-you-go, Coding Plan or Token Plan
 2. **Region/server:** only endpoints available for that plan
 
-Pay-as-you-go includes China (Beijing), Singapore, US (Virginia), and a workspace/custom endpoint. Coding Plan and Token Plan expose their documented China and international endpoints. Changing the plan or region clears the previous key because plan and regional credentials are not interchangeable.
+Pay-as-you-go includes China (Beijing), Singapore, US (Virginia), and a workspace/custom endpoint. Coding Plan and Token Plan expose China (Beijing) and Singapore endpoints. Changing the plan or region clears the previous key because plan and regional credentials are not interchangeable.
 
 Melo can reject an obvious standard-key versus `sk-sp-` plan-key mismatch. It cannot infer the exact Coding/Token plan or region from the key text; Alibaba Cloud remains the authority that validates the key's actual plan and regional scope.
 
-Coding Plan and Token Plan remain selectable at the user's request, but the UI shows an important provider-policy warning: Alibaba Cloud documents these plans for supported interactive coding/agent tools, not custom applications. Using them outside that scope may suspend the plan or key. For Melo, Pay-as-you-go is the appropriate Alibaba Cloud option for an authorised custom-app API call. See the official [Alibaba Cloud Base URL overview](https://help.aliyun.com/en/model-studio/base-url) and [third-party tool connection policy](https://www.alibabacloud.com/help/en/model-studio/more-tools).
+The plan and region/server selectors determine the endpoint used by both Guided Rewrite and Melo Chat. Account permissions, model availability and the exact plan/region scope are still validated by Alibaba Cloud.
 
 The app sends requests to:
 
@@ -219,7 +245,7 @@ For this prototype, the app communicates directly with the provider selected by 
 
 The provider flow is inspired by the separation used in Qoder's BYOK custom-model setup: provider first, then connection details supplied by the user. Unlike Qoder's hosted tiers, Melo offers no built-in model service. See [Qoder Custom Models](https://docs.qoder.com/user-guide/chat/custom-models).
 
-## Offline Fallback
+## Guided Rewrite Offline Fallback
 
 The app remains demonstrable without an API key or stable internet connection.
 
@@ -232,6 +258,8 @@ When an AI request is unavailable, Melo uses a deterministic local multilingual 
 This fallback is important for a live competition demo because the core user journey still works if Wi-Fi, quota or provider availability fails.
 
 Because this fallback is deterministic, similar inputs can produce the same wording. The result screen therefore states whether the text came from the provider or from Melo's local fallback.
+
+This fallback applies only to the structured Guided Rewrite flow. Melo Chat requires a configured provider and does not generate a pretend local conversation when a key is missing or a request fails.
 
 ## Suggested Live Demo
 
@@ -260,21 +288,29 @@ A demo-speed button can skip the full breathing wait while still showing the int
 
 ## Example Product Pitch
 
-> Students often send messages at the peak of anger, stress or disappointment. Melo is a virtual wellness companion that creates a short pause, helps the user identify what they feel, and rewrites the message in a healthier and more actionable way. It supports several AI providers, works offline as a fallback, and uses a virtual-pet reward system without guilt or streak pressure.
+> Students often send messages at the peak of anger, stress or disappointment. Melo is a virtual wellness companion that creates a short pause, helps the user identify what they feel, and rewrites the message in a healthier and more actionable way. Its provider-backed Chat can continue the reflection with bounded device-local context, while the virtual pet responds through safe model-selected expressions without guilt or streak pressure.
 
 ## Technical Overview
 
 ```text
 React Native / Expo client
         │
-        ├── User draft and emotional context
-        ├── Guided breathing interaction
+        ├── Guided Rewrite
+        │       ├── User draft and emotional context
+        │       ├── Guided breathing interaction
+        │       └── Local offline fallback when AI is unavailable
+        │
+        ├── Melo Chat
+        │       ├── Latest 24 messages retained on this device
+        │       ├── Latest 8 messages sent as provider context
+        │       └── Optional model-capable image input
+        │
         ├── Basic safety keyword guard
         │
         ├── User-selected OpenAI-compatible provider
         │       └── POST /chat/completions
         │
-        └── Local offline fallback when AI is unavailable
+        └── Whitelisted model expression → animated Melo UI
 ```
 
 The provider adapter is intentionally shared across OpenAI, Google AI Studio, Alibaba Cloud, DeepSeek, Kimi, MiniMax, BigModel and custom compatible services. Provider-specific endpoint presets are stored separately from the rewrite logic, and every Model ID remains user supplied.
@@ -285,12 +321,12 @@ Melo is a student prototype and must not be described as a therapist, clinical a
 
 Current boundaries:
 
-- message drafts are kept in the current application state and are not intentionally stored in a message-history database;
+- Guided Rewrite drafts stay in the current application state; Melo Chat intentionally retains only its newest 24 messages on the current device/browser and provides a clear-local-history action;
 - API keys are not hard-coded in the repository;
-- native settings use Expo SecureStore;
-- the user draft is sent directly to the AI provider selected by the user;
+- native settings and native Chat text use Expo SecureStore; Web settings remain session-only while Web Chat history uses local storage;
+- Guided Rewrite input, and at most the latest eight Melo Chat messages plus any explicitly enabled attachment, are sent directly to the AI provider selected by the user;
 - the prototype safety guard is based on a small keyword list;
-- a detected high-risk phrase stops the normal rewrite flow and recommends real-world support;
+- a detected high-risk phrase stops the normal rewrite or Chat provider flow and recommends real-world support;
 - the keyword guard is **not** a reliable clinical risk model.
 
 A production version would require:
@@ -312,6 +348,12 @@ App.tsx
 src/components/MeloPet.tsx
   Animated virtual pet, mood states and accessories
 
+src/components/MeloChat.tsx
+  Message transcript, local-history controls, image composer and provider states
+
+src/components/MeloChatAvatar.tsx
+  Chat-size wrapper around the same Home Melo visual
+
 src/components/AISettingsModal.tsx
   Interface language and BYOK connection settings
 
@@ -331,7 +373,19 @@ src/i18n.ts
   Type-safe English, Traditional Chinese and Simplified Chinese UI copy
 
 src/services/ai.ts
-  Prompt construction and OpenAI-compatible API adapter
+  Guided Rewrite prompt and shared provider adapter integration
+
+src/services/chat.ts
+  Melo persona, bounded context, expression parsing, image parts and Chat safety
+
+src/services/providerClient.ts
+  Shared OpenAI-compatible Chat Completions transport and safe diagnostics
+
+src/services/chatStorage.ts
+  Bounded native SecureStore / Web local-storage Chat persistence
+
+src/services/chatImages.ts
+  Local image picking, normalisation, size limits and cleanup
 
 src/services/storage.ts
   SecureStore and web session-storage helpers
@@ -419,10 +473,10 @@ Then open a pull request or coordinate with the team before merging into `main`.
 - Some providers may block browser requests because of CORS restrictions.
 - The safety guard is intentionally basic and can miss or misclassify risk.
 - The offline fallback recognises the fixed group-project demo and common patterns, but is not full natural-language understanding.
-- The real-account smoke test covered the provider adapter in a one-off local process; it has not yet been repeated through the complete settings-to-result flow on a physical phone.
+- The authorised real-account path has been verified through the iOS Simulator UI for Guided Rewrite and Melo Chat, but has not yet been repeated through the complete settings-to-result flow on a physical phone.
 - `npm audit` currently reports 10 moderate and 1 high advisory in Expo 54's transitive build-tool chain. The automated major-version fix returns the project to Expo 57, which currently conflicts with the physical-device Expo Go requirement, so it has not been applied blindly.
 - Calm Star progression currently unlocks only a few simple accessories.
-- There is no account system, cloud synchronisation, analytics dashboard or message history.
+- There is no account system, cloud synchronisation or analytics dashboard; Chat history is deliberately device-local and capped at 24 messages.
 
 ## Development Priorities
 

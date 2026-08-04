@@ -19,7 +19,8 @@ export function selectProviderSettings(
     provider,
     apiKey: '',
     baseUrl: preset.baseUrl,
-    model: preset.model
+    model: preset.model,
+    supportsImages: false
   };
 }
 

@@ -8,7 +8,7 @@ import type {
 } from './types';
 import type { AlibabaRegion } from './config/alibaba';
 
-interface UiCopy {
+export interface UiCopy {
   languageName: string;
   brandTagline: string;
   settingsAccessibility: string;
@@ -19,6 +19,7 @@ interface UiCopy {
     checkin: string;
     pause: string;
     result: string;
+    chat: string;
   };
   common: {
     back: string;
@@ -33,9 +34,59 @@ interface UiCopy {
     offlineStatus: string;
     aiStatus: string;
     start: string;
+    chat: string;
     configure: string;
     noGuiltTitle: string;
     noGuiltBody: string;
+  };
+  chat: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    sessionNotice: string;
+    notTherapyNotice: string;
+    emptyTitle: string;
+    emptyBody: string;
+    quickPrompts: [string, string];
+    inputLabel: string;
+    placeholder: string;
+    send: string;
+    sending: string;
+    clear: string;
+    clearConfirmTitle: string;
+    clearConfirmBody: string;
+    clearConfirm: string;
+    cancel: string;
+    memoryLoading: string;
+    memoryUnavailable: string;
+    configure: string;
+    rewriteOffline: string;
+    rewriteLatest: string;
+    you: string;
+    melo: string;
+    aiMode: (provider: string) => string;
+    offlineMode: string;
+    aiLabel: (provider: string, model?: string) => string;
+    safetyLabel: string;
+    unavailableTitle: string;
+    noKeyBody: string;
+    timeoutBody: (provider: string) => string;
+    networkBody: (provider: string) => string;
+    httpBody: (provider: string, status?: number) => string;
+    invalidBody: (provider: string) => string;
+    configurationBody: (provider: string) => string;
+    unsafeBody: (provider: string) => string;
+    retry: string;
+    attachImage: string;
+    removeImage: string;
+    imageLabel: string;
+    imageDisabled: string;
+    imageDefaultMessage: string;
+    imagePickerErrorTitle: string;
+    imagePickerErrorBody: string;
+    imageTooLargeBody: string;
+    attachmentBody: string;
+    imageNotEnabledBody: string;
   };
   draft: {
     eyebrow: string;
@@ -131,6 +182,10 @@ interface UiCopy {
     baseUrl: string;
     modelId: string;
     modelPlaceholder: string;
+    imageInputTitle: string;
+    imageInputBody: string;
+    imageInputOn: string;
+    imageInputOff: string;
     show: string;
     hide: string;
     prototypeTitle: string;
@@ -188,7 +243,8 @@ const translations: Record<UILanguage, UiCopy> = {
       draft: 'Tell me what you almost sent. I will not judge.',
       checkin: 'Naming the feeling helps create a little space.',
       pause: 'Breathe with me. We can answer after the feeling slows down.',
-      result: 'You made room for a kinder and clearer next step.'
+      result: 'You made room for a kinder and clearer next step.',
+      chat: 'We can sort through one thought at a time.'
     },
     common: {
       back: 'Back',
@@ -203,9 +259,63 @@ const translations: Record<UILanguage, UiCopy> = {
       offlineStatus: 'No key needed. Try the complete demo offline.',
       aiStatus: 'Your selected provider will rewrite the message.',
       start: 'Start a calm rewrite',
+      chat: 'Chat with Melo',
       configure: 'Settings & AI provider',
       noGuiltTitle: '✦ Calm Stars, never streak pressure',
       noGuiltBody: 'Melo celebrates completed pauses. It never becomes sick, hungry or sad when you take a break from the app.'
+    },
+    chat: {
+      eyebrow: 'OPTIONAL · SHORT CHAT',
+      title: 'Melo',
+      body: 'Use a short AI conversation to name what feels difficult and find one manageable next step.',
+      sessionNotice: 'Up to 24 messages are stored only on this device. Each reply sends only the latest 8 messages to your selected provider. Clear local conversation removes that history.',
+      notTherapyNotice: 'Melo is an AI companion, not a therapist, diagnosis tool or crisis service.',
+      emptyTitle: 'What is on your mind?',
+      emptyBody: 'Start small. You do not need to explain everything at once.',
+      quickPrompts: [
+        'I feel overwhelmed and do not know where to start.',
+        'I need help preparing for a difficult conversation.'
+      ],
+      inputLabel: 'Message to Melo',
+      placeholder: 'Write one thought…',
+      send: 'Send',
+      sending: 'Melo is replying…',
+      clear: 'Clear local conversation',
+      clearConfirmTitle: 'Clear local conversation?',
+      clearConfirmBody: 'This permanently removes the saved Melo conversation from this device.',
+      clearConfirm: 'Clear from device',
+      cancel: 'Cancel',
+      memoryLoading: 'Restoring this device’s local conversation…',
+      memoryUnavailable: 'Device-local memory is currently unavailable. New messages may not be restored after the app restarts.',
+      configure: 'Configure AI provider',
+      rewriteOffline: 'Use calm rewrite offline',
+      rewriteLatest: 'Turn my latest message into a calm draft',
+      you: 'You',
+      melo: 'Melo',
+      aiMode: (provider) => `Chat uses ${provider}`,
+      offlineMode: 'Chat needs your own AI provider',
+      aiLabel: (provider, model) =>
+        model ? `AI · ${provider} · ${model}` : `AI · ${provider}`,
+      safetyLabel: 'Safety pause',
+      unavailableTitle: 'Melo could not add an AI reply',
+      noKeyBody: 'Choose your own provider, key and model before starting a chat. Melo does not provide a default model.',
+      timeoutBody: (provider) => `${provider} did not reply within 30 seconds. No assistant message was added.`,
+      networkBody: (provider) => `This device could not reach ${provider}. Check the network and selected region/server.`,
+      httpBody: (provider, status) => `${provider} rejected the chat request${status ? ` with HTTP ${status}` : ''}. Check the key, model, plan, region and quota.`,
+      invalidBody: (provider) => `${provider} returned no complete, readable chat message. Nothing was added to the conversation.`,
+      configurationBody: (provider) => `The saved ${provider} settings are incomplete or use a server that does not match the provider.`,
+      unsafeBody: (provider) => `${provider} returned a reply that Melo could not safely display. Nothing was added to the conversation.`,
+      retry: 'Retry',
+      attachImage: 'Attach image',
+      removeImage: 'Remove image',
+      imageLabel: 'Attached image',
+      imageDisabled: 'Enable image input in this model’s settings to attach a photo.',
+      imageDefaultMessage: 'Please help me think through what is visible in this image.',
+      imagePickerErrorTitle: 'Image could not be attached',
+      imagePickerErrorBody: 'Choose a JPEG, PNG or WebP image and try again.',
+      imageTooLargeBody: 'Choose a smaller image. Melo limits attachments to 1.5 MB for this prototype.',
+      attachmentBody: 'The saved image could not be read from this device. Remove it and attach it again.',
+      imageNotEnabledBody: 'This model is not marked as image-capable. Enable image input in Settings only if the selected model supports it.'
     },
     draft: {
       eyebrow: 'STEP 1 · WRITE',
@@ -302,8 +412,8 @@ const translations: Record<UILanguage, UiCopy> = {
       alibabaPlanBody: 'Choose the plan and region for your key. Melo checks the standard-versus-plan key family; Alibaba Cloud validates the exact scope.',
       alibabaRegionTitle: 'Region / server',
       alibabaRegionBody: 'Only servers supported by the selected plan are shown. Changing plan or region clears the previous key.',
-      restrictedPlanTitle: 'Official usage restriction',
-      restrictedPlanBody: 'Alibaba Cloud states that Coding Plan and Token Plan keys are for supported coding or agent tools, not custom apps. Using one here may suspend the plan or key.',
+      restrictedPlanTitle: 'Plan-specific credentials',
+      restrictedPlanBody: 'Use the dedicated key and matching region/server for this plan. Melo sends it only to the selected endpoint; Alibaba Cloud validates the account scope.',
       keyPlanMismatchTitle: 'Key and plan do not match',
       keyPlanMismatchBody: 'Pay-as-you-go uses a standard key. Coding Plan and Token Plan require their dedicated sk-sp- key. Choose the matching plan and region.',
       apiKey: 'API key',
@@ -311,6 +421,10 @@ const translations: Record<UILanguage, UiCopy> = {
       baseUrl: 'Base URL',
       modelId: 'Model ID',
       modelPlaceholder: 'Enter the exact model ID from your provider',
+      imageInputTitle: 'Image input for this model',
+      imageInputBody: 'Turn this on only when the exact model accepts OpenAI-compatible image input. The provider remains the source of truth.',
+      imageInputOn: 'Enabled',
+      imageInputOff: 'Disabled',
       show: 'Show',
       hide: 'Hide',
       prototypeTitle: 'Prototype note',
@@ -363,7 +477,8 @@ const translations: Record<UILanguage, UiCopy> = {
       draft: '告訴我你差點傳了甚麼，我不會批評你。',
       checkin: '說出感受，能為自己留出一點空間。',
       pause: '和我一起呼吸，等情緒慢下來再回覆。',
-      result: '你為更友善、更清楚的下一步留出了空間。'
+      result: '你為更友善、更清楚的下一步留出了空間。',
+      chat: '我們可以一次整理一個想法。'
     },
     common: {
       back: '返回',
@@ -378,9 +493,63 @@ const translations: Record<UILanguage, UiCopy> = {
       offlineStatus: '無需 API key，也可完整示範。',
       aiStatus: '將由你選擇的供應商改寫訊息。',
       start: '開始冷靜改寫',
+      chat: '和 Melo 對話',
       configure: '設定與 AI 供應商',
       noGuiltTitle: '✦ Calm Stars，不製造連續簽到壓力',
       noGuiltBody: 'Melo 只會慶祝你完成停頓；即使暫時不用 App，也不會生病、挨餓或難過。'
+    },
+    chat: {
+      eyebrow: '可選功能 · 短對話',
+      title: 'Melo',
+      body: '用一段簡短 AI 對話整理目前最難受的部分，再找一個可做到的下一步。',
+      sessionNotice: '最多 24 則訊息只會儲存在這部裝置；每次回覆只把最近 8 則傳送至你選擇的供應商。清除本機對話會移除這些紀錄。',
+      notTherapyNotice: 'Melo 是 AI 夥伴，不是治療師、診斷工具或危機服務。',
+      emptyTitle: '你現在最想整理甚麼？',
+      emptyBody: '可以從一小件事開始，不用一次說明全部。',
+      quickPrompts: [
+        '我感到不知所措，不知道應該從哪裏開始。',
+        '我想為一段難以開口的對話做好準備。'
+      ],
+      inputLabel: '給 Melo 的訊息',
+      placeholder: '寫下一個想法…',
+      send: '傳送',
+      sending: 'Melo 正在回覆…',
+      clear: '清除本機對話',
+      clearConfirmTitle: '要清除本機對話嗎？',
+      clearConfirmBody: '這會從這部裝置永久移除已儲存的 Melo 對話。',
+      clearConfirm: '從裝置清除',
+      cancel: '取消',
+      memoryLoading: '正在還原這部裝置的本機對話…',
+      memoryUnavailable: '裝置本機記憶目前無法使用；App 重啟後可能無法還原新訊息。',
+      configure: '設定 AI 供應商',
+      rewriteOffline: '使用離線冷靜改寫',
+      rewriteLatest: '把我最新的訊息變成冷靜草稿',
+      you: '你',
+      melo: 'Melo',
+      aiMode: (provider) => `對話使用 ${provider}`,
+      offlineMode: '對話需要你自己的 AI 供應商',
+      aiLabel: (provider, model) =>
+        model ? `AI · ${provider} · ${model}` : `AI · ${provider}`,
+      safetyLabel: '安全停頓',
+      unavailableTitle: 'Melo 未能加入 AI 回覆',
+      noKeyBody: '請先選擇自己的供應商、key 與模型。Melo 不提供預設模型。',
+      timeoutBody: (provider) => `${provider} 未能在 30 秒內回覆；本次沒有加入助理訊息。`,
+      networkBody: (provider) => `這部裝置無法連接 ${provider}。請檢查網絡及所選地區／伺服器。`,
+      httpBody: (provider, status) => `${provider} 拒絕了對話請求${status ? `（HTTP ${status}）` : ''}。請檢查 key、模型、方案、地區及額度。`,
+      invalidBody: (provider) => `${provider} 沒有傳回完整、可讀的對話訊息；對話中沒有加入任何內容。`,
+      configurationBody: (provider) => `已儲存的 ${provider} 設定不完整，或伺服器與所選供應商不相符。`,
+      unsafeBody: (provider) => `${provider} 的回覆未能安全顯示；對話中沒有加入任何內容。`,
+      retry: '重試',
+      attachImage: '附加圖片',
+      removeImage: '移除圖片',
+      imageLabel: '已附加圖片',
+      imageDisabled: '請先在這個模型的設定中啟用圖片輸入，才可附加照片。',
+      imageDefaultMessage: '請幫我整理這張圖片中可以看見的內容。',
+      imagePickerErrorTitle: '無法附加圖片',
+      imagePickerErrorBody: '請選擇 JPEG、PNG 或 WebP 圖片後重試。',
+      imageTooLargeBody: '請選擇較小的圖片；此原型把附件限制為 1.5 MB。',
+      attachmentBody: '無法從這部裝置讀取已儲存的圖片；請移除後重新附加。',
+      imageNotEnabledBody: '這個模型尚未標記為支援圖片。只有在所選模型確實支援時，才在設定中啟用圖片輸入。'
     },
     draft: {
       eyebrow: '第 1 步 · 寫下來',
@@ -477,8 +646,8 @@ const translations: Record<UILanguage, UiCopy> = {
       alibabaPlanBody: '請選擇 key 對應的方案及地區；Melo 只檢查一般 key／套餐 key 類別，確切授權由阿里雲驗證。',
       alibabaRegionTitle: '地區／伺服器',
       alibabaRegionBody: '只顯示目前方案支援的伺服器；切換方案或地區會清除先前的 key。',
-      restrictedPlanTitle: '官方使用範圍提醒',
-      restrictedPlanBody: '阿里雲說明 Coding Plan 與 Token Plan 只供支援的編程或 Agent 工具使用，不適用於自訂 App；在此使用可能導致套餐或 key 被停用。',
+      restrictedPlanTitle: '方案專屬憑證',
+      restrictedPlanBody: '請使用這個方案的專屬 key 及相符地區／伺服器。Melo 只會傳送到所選 endpoint，帳戶範圍由阿里雲驗證。',
       keyPlanMismatchTitle: 'Key 與方案不相符',
       keyPlanMismatchBody: '按量付費使用一般 key；Coding Plan 與 Token Plan 必須使用各自 sk-sp- 開頭的專屬 key。請選擇相符的方案與地區。',
       apiKey: 'API key',
@@ -486,6 +655,10 @@ const translations: Record<UILanguage, UiCopy> = {
       baseUrl: 'Base URL',
       modelId: '模型 ID',
       modelPlaceholder: '輸入供應商提供的準確模型 ID',
+      imageInputTitle: '這個模型的圖片輸入',
+      imageInputBody: '只有在準確模型支援 OpenAI-compatible 圖片輸入時才啟用；最終能力仍以供應商回應為準。',
+      imageInputOn: '已啟用',
+      imageInputOff: '未啟用',
       show: '顯示',
       hide: '隱藏',
       prototypeTitle: '原型說明',
@@ -544,7 +717,8 @@ const translations: Record<UILanguage, UiCopy> = {
       draft: '告诉我你差点发了什么，我不会批评你。',
       checkin: '说出感受，能为自己留出一点空间。',
       pause: '和我一起呼吸，等情绪慢下来再回复。',
-      result: '你为更友善、更清楚的下一步留出了空间。'
+      result: '你为更友善、更清楚的下一步留出了空间。',
+      chat: '我们可以一次整理一个想法。'
     },
     common: {
       back: '返回',
@@ -559,9 +733,63 @@ const translations: Record<UILanguage, UiCopy> = {
       offlineStatus: '无需 API key，也可完整演示。',
       aiStatus: '将由你选择的服务商改写信息。',
       start: '开始冷静改写',
+      chat: '和 Melo 对话',
       configure: '设置与 AI 服务商',
       noGuiltTitle: '✦ Calm Stars，不制造连续签到压力',
       noGuiltBody: 'Melo 只会庆祝你完成停顿；即使暂时不用 App，也不会生病、挨饿或难过。'
+    },
+    chat: {
+      eyebrow: '可选功能 · 短对话',
+      title: 'Melo',
+      body: '用一段简短 AI 对话整理目前最难受的部分，再找一个能做到的下一步。',
+      sessionNotice: '最多 24 条信息只会存储在这台设备；每次回复只把最近 8 条发送至你选择的服务商。清除本地对话会移除这些记录。',
+      notTherapyNotice: 'Melo 是 AI 伙伴，不是治疗师、诊断工具或危机服务。',
+      emptyTitle: '你现在最想整理什么？',
+      emptyBody: '可以从一件小事开始，不用一次说明全部。',
+      quickPrompts: [
+        '我感到不知所措，不知道应该从哪里开始。',
+        '我想为一段难以开口的对话做好准备。'
+      ],
+      inputLabel: '给 Melo 的信息',
+      placeholder: '写下一个想法…',
+      send: '发送',
+      sending: 'Melo 正在回复…',
+      clear: '清除本地对话',
+      clearConfirmTitle: '要清除本地对话吗？',
+      clearConfirmBody: '这会从这台设备永久移除已保存的 Melo 对话。',
+      clearConfirm: '从设备清除',
+      cancel: '取消',
+      memoryLoading: '正在恢复这台设备的本地对话…',
+      memoryUnavailable: '设备本地记忆目前无法使用；App 重启后可能无法恢复新信息。',
+      configure: '设置 AI 服务商',
+      rewriteOffline: '使用离线冷静改写',
+      rewriteLatest: '把我最新的信息变成冷静草稿',
+      you: '你',
+      melo: 'Melo',
+      aiMode: (provider) => `对话使用 ${provider}`,
+      offlineMode: '对话需要你自己的 AI 服务商',
+      aiLabel: (provider, model) =>
+        model ? `AI · ${provider} · ${model}` : `AI · ${provider}`,
+      safetyLabel: '安全停顿',
+      unavailableTitle: 'Melo 未能加入 AI 回复',
+      noKeyBody: '请先选择自己的服务商、key 与模型。Melo 不提供默认模型。',
+      timeoutBody: (provider) => `${provider} 未能在 30 秒内回复；本次没有加入助手信息。`,
+      networkBody: (provider) => `这台设备无法连接 ${provider}。请检查网络及所选地区／服务器。`,
+      httpBody: (provider, status) => `${provider} 拒绝了对话请求${status ? `（HTTP ${status}）` : ''}。请检查 key、模型、方案、地区及额度。`,
+      invalidBody: (provider) => `${provider} 没有返回完整、可读的对话信息；对话中没有加入任何内容。`,
+      configurationBody: (provider) => `已保存的 ${provider} 设置不完整，或服务器与所选服务商不相符。`,
+      unsafeBody: (provider) => `${provider} 的回复未能安全显示；对话中没有加入任何内容。`,
+      retry: '重试',
+      attachImage: '附加图片',
+      removeImage: '移除图片',
+      imageLabel: '已附加图片',
+      imageDisabled: '请先在这个模型的设置中启用图片输入，才可附加照片。',
+      imageDefaultMessage: '请帮我整理这张图片中可以看见的内容。',
+      imagePickerErrorTitle: '无法附加图片',
+      imagePickerErrorBody: '请选择 JPEG、PNG 或 WebP 图片后重试。',
+      imageTooLargeBody: '请选择较小的图片；此原型把附件限制为 1.5 MB。',
+      attachmentBody: '无法从这台设备读取已保存的图片；请移除后重新附加。',
+      imageNotEnabledBody: '这个模型尚未标记为支持图片。只有在所选模型确实支持时，才在设置中启用图片输入。'
     },
     draft: {
       eyebrow: '第 1 步 · 写下来',
@@ -658,8 +886,8 @@ const translations: Record<UILanguage, UiCopy> = {
       alibabaPlanBody: '请选择 key 对应的方案及地区；Melo 只检查普通 key／套餐 key 类别，准确授权由阿里云验证。',
       alibabaRegionTitle: '地区／服务器',
       alibabaRegionBody: '只显示当前方案支持的服务器；切换方案或地区会清除之前的 key。',
-      restrictedPlanTitle: '官方使用范围提醒',
-      restrictedPlanBody: '阿里云说明 Coding Plan 与 Token Plan 只供支持的编程或 Agent 工具使用，不适用于自定义 App；在此使用可能导致套餐或 key 被停用。',
+      restrictedPlanTitle: '方案专用凭证',
+      restrictedPlanBody: '请使用这个方案的专用 key 及相符地区／服务器。Melo 只会发送到所选 endpoint，账户范围由阿里云验证。',
       keyPlanMismatchTitle: 'Key 与方案不相符',
       keyPlanMismatchBody: '按量付费使用普通 key；Coding Plan 与 Token Plan 必须使用各自 sk-sp- 开头的专用 key。请选择相符的方案与地区。',
       apiKey: 'API key',
@@ -667,6 +895,10 @@ const translations: Record<UILanguage, UiCopy> = {
       baseUrl: 'Base URL',
       modelId: '模型 ID',
       modelPlaceholder: '输入服务商提供的准确模型 ID',
+      imageInputTitle: '这个模型的图片输入',
+      imageInputBody: '只有在准确模型支持 OpenAI-compatible 图片输入时才启用；最终能力仍以服务商响应为准。',
+      imageInputOn: '已启用',
+      imageInputOff: '未启用',
       show: '显示',
       hide: '隐藏',
       prototypeTitle: '原型说明',

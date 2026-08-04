@@ -10,19 +10,40 @@ Melo 是一隻不會以飢餓、死亡或連續簽到向用戶施壓的虛擬寵
 
 - 四段主要流程：原訊息 → 情緒與對象 → 呼吸 pause → 改寫結果
 - 虛擬寵物 Melo，會按流程改變表情與呼吸動畫
+- 類似 ChatGPT App 訊息形式的 Melo Chat，使用 Melo 自己的陪伴人格與真實已設定 Provider 回覆
+- 每則成功的 AI 回覆都保存並顯示當時實際使用的 Provider 與模型，不會在之後更換設定時誤改舊標籤
+- Chat 最近 24 則訊息只保存在目前裝置／瀏覽器；每輪最多只把最近 8 則對話連同系統指示送到 Provider
+- 圖片輸入預設關閉；只有用戶確認目前準確 Model ID 支援圖片後才可手動啟用
+- 模型可以選擇 Melo 表情，但只限 `calm`、`listening`、`thinking`、`encouraging`、`concerned` 五種由 App 控制的狀態
 - Calm Stars：完成一次健康溝通流程即可獲得星星
 - 無 streak 懲罰；寵物不會因為用戶沒有打開 App 而生病或難過
 - 內建 OpenAI、Google AI Studio、阿里雲百鍊、DeepSeek、Kimi、MiniMax、智譜 BigModel 及自訂 OpenAI-compatible 連線預設；真實帳戶相容性仍需逐一驗證
-- Melo 不提供模型服務、key、額度或預設模型；用戶自行填 API key、Base URL 和準確的 Model ID
+- Melo 不提供模型服務、key、額度或已啟用的預設 Provider／模型；用戶自行選擇並填寫 API key、Base URL 和準確的 Model ID
 - 阿里雲提供兩層選單：Plan（按量／Coding Plan／Token Plan）及該 Plan 支援的地區／伺服器
 - 介面可在繁體中文、簡體中文、English 之間即時切換並保存
 - iOS / Android 使用 Expo SecureStore 儲存設定；Web 只保留在目前瀏覽器分頁
-- API 不可用或未填 key 時，自動使用標示清楚的離線改寫
+- Guided Rewrite 在 API 不可用或未填 key 時會使用標示清楚的離線改寫；Melo Chat 不會偽造離線模型回覆
 - 只有收到可讀取的模型回覆才會標示為 AI 結果；離線模板不會冒充 Provider 回覆
 - Provider 最長等待 30 秒，並分開顯示逾時、網絡、HTTP、回覆格式及本機設定錯誤
 - 簡單危機字詞 guard：偵測到明顯自傷／傷人語句時停止一般改寫，改為建議尋求真實世界支援
 - Before／After、Copy 可見回饋、Share，以及英文／繁中／簡中／廣東話輸出
 - 支援 320 px 窄屏、跨平台 Safe Area 與 Reduce Motion
+
+## Melo Chat
+
+Melo Chat 是一個獨立的全高對話畫面，包含訊息氣泡、固定輸入框、快捷開場、重試、清除本機對話及「轉到改寫」等操作。它只使用用戶自己設定並保存的相容 Provider 帳戶、API key 與準確 Model ID；沒有 key 或接口失敗時會誠實顯示原因，不會加入一段假裝由模型生成的助理訊息。
+
+對話記憶刻意保持本機化及有上限：
+
+- 只保存最近 **24 則訊息**；
+- 每次接口請求最多傳送最近 **8 則對話訊息**，另加 Melo 的系統人格與安全指示；
+- iOS／Android 的訊息文字使用 Expo SecureStore 並限制為只供目前裝置存取；
+- Web 使用目前瀏覽器的 local storage；
+- 沒有帳戶、雲端歷史或跨裝置同步，用戶可在 Chat 內清除本機紀錄。
+
+圖片屬於 Model 級別的手動能力設定。用戶必須在設定中確認「這個 Model 支援圖片輸入」，Melo 才會開放附件按鈕；程式會先在本機縮放及標準化圖片。Provider 品牌本身有視覺模型，不代表目前填入的 Model ID 一定支援圖片。
+
+成功回覆會在該訊息下方顯示 Provider 與模型。若相容接口回傳實際 served model，Melo 會保存該值；否則保存請求時填入的準確 Model ID。模型也可輸出一個表情狀態，App 再把它映射到首頁同一隻動態 Melo。模型不能傳入任意動畫、樣式或程式碼；不在白名單內的值會安全回退。Melo 只是一個溝通及自我整理伙伴，不是心理治療、診斷或危機服務。
 
 ## 開始使用
 
@@ -59,7 +80,7 @@ npx expo-doctor
 此分支已於 2026 年 8 月 4 日完成：
 
 - TypeScript type-check 通過
-- 33 項 deterministic regression tests 全部通過
+- deterministic regression suite 通過，並涵蓋 Provider 真實歸因、Chat 上下文上限、本機保存、安全邊界及圖片能力開關
 - Expo Doctor 的 SDK 54 檢查 18／18 通過
 - Web、iOS、Android production export 全部成功
 - 以 390 × 844 手機尺寸完整操作離線黃金流程，包括三種介面語言、Provider 選擇、阿里雲 Plan／地區切換、Before／After、Copy 回饋與 Calm Stars
@@ -67,6 +88,7 @@ npx expo-doctor
 - 渲染 HTTP 500 流程會顯示 `Offline fallback`、`AI rewrite did not complete` 及 `HTTP 500`，不會把本機確定性模板冒充為模型結果
 - 經明確授權後，以合成且不含敏感資料的草稿，使用 `qwen3-coder-plus` 對阿里雲百鍊 Coding Plan 中國區完成一次真實 `rewriteMessage` adapter smoke test；結果為 `source: ai`，不是 fallback。憑證沒有寫入 repository 或文件
 - 再以 Computer Use 在 iOS Simulator 走完整原生 UI，使用已設定且獲明確授權的阿里雲 Coding Plan 帳戶連續測試「溫和」與「直接」兩種語氣。兩段繁中模型輸出明顯不同，結果 badge 均顯示阿里雲 Coding Plan；Metro 每輪各有一行 `provider rewrite succeeded`，output length 分別為 62 與 53。測試沒有讀取或顯示已儲存 key
+- Computer Use 亦以同一個已授權 Simulator 帳戶完成多輪 Melo Chat，使用 `qwen3.7-plus` 收到具上下文且不同的回覆；模型選擇 `encouraging` 表情，新訊息逐句顯示 `AI · Alibaba Cloud · Coding Plan · qwen3.7-plus`，Metro 同步記錄相同 model／expression，完整重新載入 App 後本機對話與歸屬標籤仍能還原
 
 以上證明 source／離線 Demo 與原生模擬器 Provider UI 路徑已就緒；組員真機仍需在其自身網絡下完成一次可見確認。
 
@@ -77,8 +99,9 @@ npx expo-doctor
 - API key
 - Base URL
 - Model ID
+- 目前準確 Model ID 是否支援圖片輸入
 
-程式只預填官方相容 endpoint，不會預填 Model ID：
+程式只提供 endpoint 預設，不會提供或啟用任何 Provider 帳戶、模型服務、key、額度或預設 Model ID。畫面最初顯示的 Provider preset 並不等於已完成設定；用戶仍須明確選擇並保存自己的連線資料：
 
 | Provider | Base URL |
 |---|---|
@@ -91,7 +114,9 @@ npx expo-doctor
 | 智譜 BigModel | `https://open.bigmodel.cn/api/paas/v4` |
 | Custom provider | 使用者自行輸入 |
 
-百鍊不同 Plan、地域及業務空間使用不同的 key 與 Base URL。切換 Plan 或地區會清除舊 key，避免誤用。Coding Plan／Token Plan 按用戶要求保留為可選項，但 App 會顯示阿里雲官方限制：它們只供支援的編程或 Agent 工具使用，不適用於自訂 App，違規使用可能停用套餐或 key。Melo 的自訂 App 調用應使用已授權的按量付費 API。參見[阿里雲 Base URL 官方文件](https://help.aliyun.com/zh/model-studio/base-url)。
+百鍊不同 Plan、地域及業務空間使用不同的 key 與 Base URL。設定分成兩層選單：按量付費、Coding Plan 或 Token Plan；再選擇該 Plan 顯示的地區／伺服器。按量付費提供中國（北京）、新加坡、美國（維珍尼亞）及自訂業務空間 endpoint；Coding Plan 與 Token Plan 提供中國（北京）及新加坡 endpoint。切換 Plan 或地區會清除舊 key，避免誤用。
+
+所選 Plan 與地區／伺服器會決定 Guided Rewrite 及 Melo Chat 實際使用的 endpoint；帳戶權限、模型可用性及準確的 Plan／地域範圍最終仍由阿里雲驗證。
 
 Melo 可以攔截一般 key 與 `sk-sp-` 套餐 key 這種明顯不相符，但不能從 key 文字判斷其確切 Coding／Token Plan 或地域；最終方案及地域授權仍由阿里雲伺服器驗證。
 
@@ -112,7 +137,7 @@ Melo 最長等待 Provider 30 秒。只有 Chat Completions 回覆含有可讀�
 
 程式不會把 Provider 原始 body／error message、草稿、API key 或 Authorization header 寫入結果或診斷 log；如有安全的 request ID，則可顯示供用戶向 Provider 追查。
 
-離線 fallback 是確定性模板，所以相似輸入可能產生相同文字。結果頁現在會清楚說明文字來自模型還是 Melo 本機 fallback。
+離線 fallback 是確定性模板，所以相似輸入可能產生相同文字。結果頁現在會清楚說明文字來自模型還是 Melo 本機 fallback。這個 fallback 只適用於結構化 Guided Rewrite；Melo Chat 必須使用已設定 Provider，不會在 key 缺失或請求失敗時生成假對話。
 
 ### Web 注意事項
 
@@ -122,10 +147,11 @@ Melo 最長等待 Provider 30 秒。只有 Chat Completions 回覆含有可讀�
 
 這是比賽 prototype，不是心理治療、診斷或危機服務。
 
-- 原始草稿只存在目前 App state，程式沒有刻意建立訊息歷史資料庫
+- Guided Rewrite 草稿只存在目前 App state；Melo Chat 則刻意只在目前裝置／瀏覽器保存最近 24 則訊息，並提供清除本機紀錄操作
 - API key 沒有硬編碼在 source code
-- 原生裝置以 SecureStore 保存 provider 設定
-- 使用者草稿會直接傳送到其選擇的 AI provider
+- 原生裝置以 SecureStore 保存 Provider 設定及 Chat 訊息文字；Web 設定只在目前 session 保存，而 Web Chat 使用 local storage
+- Guided Rewrite 輸入，以及最多最近 8 則 Melo Chat 訊息與用戶明確啟用的附件，會直接傳送到其選擇的 AI Provider
+- Chat 沒有帳戶、雲端歷史或跨裝置同步
 - 正式產品應加入可信任 backend、速率限制、provider moderation、同意流程、資料保留政策及完整安全評估
 - `src/services/safety.ts` 只是簡單 prototype keyword guard，不應被描述成臨床風險偵測模型
 
@@ -168,21 +194,27 @@ Melo 最長等待 Provider 30 秒。只有 Chat Completions 回覆含有可讀�
 - 直接由 client 呼叫 Provider 只適合 prototype；Web 亦可能受到 CORS 限制
 - 安全 guard 只是關鍵字規則，可能漏判或誤判，不能作臨床風險評估
 - 離線 fallback 只對固定小組項目 Demo 及常見模式有較具體的理解，不是完整自然語言模型
-- 真實帳戶 smoke test 只覆蓋一次性本機程序內的 Provider adapter；尚未在真機完成設定到結果的整段流程
+- 已授權真實帳戶已在 iOS Simulator UI 完成 Guided Rewrite 與 Melo Chat 路徑，但尚未在實體手機完成設定到結果的整段流程
 - Calm Star 目前只提供三個簡單配件門檻
 - `npm audit` 目前回報 Expo 54 間接 build-tool chain 的 10 個 moderate 及 1 個 high advisory；自動 major-version 修復會把專案升回目前不符合真機 Expo Go 要求的 Expo 57，因此沒有盲目套用
-- 尚未加入帳戶、雲端同步、分析儀表板或訊息歷史
+- 尚未加入帳戶、雲端同步或分析儀表板；Chat 訊息歷史刻意只存本機並限制為最近 24 則
 
 ## 專案結構
 
 ```text
 App.tsx                       主流程與畫面
 src/components/MeloPet.tsx   虛擬寵物與動畫
+src/components/MeloChat.tsx  對話畫面、訊息氣泡、附件及本機紀錄操作
+src/components/MeloChatAvatar.tsx  重用首頁 Melo 的對話頭像
 src/components/AISettingsModal.tsx
 src/config/alibaba.ts            阿里雲 Plan／地區／endpoint 對照
 src/config/providers.ts      Provider 預設值
 src/i18n.ts                  三語介面文案
-src/services/ai.ts           OpenAI-compatible API adapter
+src/services/ai.ts           Guided Rewrite 與共用 Provider adapter 整合
+src/services/chat.ts         Melo 人格、有限上下文、表情解析、圖片及安全邊界
+src/services/providerClient.ts  共用 OpenAI-compatible transport 與安全診斷
+src/services/chatStorage.ts  SecureStore／Web local storage 對話保存
+src/services/chatImages.ts   圖片挑選、縮放、限制及清理
 src/services/storage.ts      SecureStore / Web session storage
 src/services/safety.ts       Prototype risk keyword guard
 src/utils/fallback.ts        離線訊息模板

@@ -21,12 +21,19 @@ test('saved AI settings are accepted only when every required field has a valid 
     provider: 'openai',
     apiKey: 'test-key',
     baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-5-mini'
+    model: 'gpt-5-mini',
+    supportsImages: false
   });
 
   assert.deepEqual(parseAISettings(valid), JSON.parse(valid));
   assert.equal(parseAISettings('{"provider":"removed-provider"}'), null);
   assert.equal(parseAISettings('{"provider":"openai","apiKey":42}'), null);
+  assert.equal(
+    parseAISettings(
+      '{"provider":"openai","apiKey":"key","baseUrl":"https://api.openai.com/v1","model":"model","supportsImages":"yes"}'
+    ),
+    null
+  );
   assert.equal(parseAISettings('not json'), null);
 });
 
@@ -40,7 +47,8 @@ test('Alibaba Cloud Coding Plan is a distinct selectable preset', () => {
     provider: 'bailian-coding',
     apiKey: 'sk-sp-test',
     baseUrl: codingPlan.baseUrl,
-    model: codingPlan.model
+    model: codingPlan.model,
+    supportsImages: false
   });
   assert.deepEqual(parseAISettings(saved), JSON.parse(saved));
 });
@@ -109,6 +117,17 @@ test('Alibaba plan-key family is kept separate from pay-as-you-go keys', () => {
 
 test('AI settings use a new storage key so legacy default models are not restored', () => {
   assert.equal(AI_SETTINGS_STORAGE_KEY, 'melo.ai-settings.v2');
+  assert.equal(
+    parseAISettings(
+      JSON.stringify({
+        provider: 'openai',
+        apiKey: 'legacy-key',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'legacy-model'
+      })
+    )?.supportsImages,
+    false
+  );
 });
 
 test('reselecting a provider or Alibaba region preserves the current credentials', () => {
@@ -116,7 +135,8 @@ test('reselecting a provider or Alibaba region preserves the current credentials
     provider: 'bailian-coding' as const,
     apiKey: 'sk-sp-private',
     baseUrl: 'https://coding-intl.dashscope.aliyuncs.com/v1',
-    model: 'user-selected-model'
+    model: 'user-selected-model',
+    supportsImages: false
   };
 
   assert.equal(selectProviderSettings(current, 'bailian-coding'), current);
@@ -128,14 +148,16 @@ test('changing provider or Alibaba region clears credentials and model intention
     provider: 'bailian-coding' as const,
     apiKey: 'sk-sp-private',
     baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',
-    model: 'user-selected-model'
+    model: 'user-selected-model',
+    supportsImages: false
   };
 
   assert.deepEqual(selectProviderSettings(current, 'deepseek'), {
     provider: 'deepseek',
     apiKey: '',
     baseUrl: PROVIDERS.deepseek.baseUrl,
-    model: ''
+    model: '',
+    supportsImages: false
   });
   assert.deepEqual(selectAlibabaRegionSettings(current, 'singapore'), {
     ...current,

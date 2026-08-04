@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme';
-import type { PetMood } from '../types';
+import type { MeloExpression, PetMood } from '../types';
 
 interface MeloPetProps {
   mood: PetMood;
   size?: number;
   stars?: number;
+  expression?: MeloExpression;
+  animated?: boolean;
 }
 
 const faceByMood: Record<PetMood, string> = {
@@ -18,7 +20,21 @@ const faceByMood: Record<PetMood, string> = {
   proud: '˶ᵔ ᵕ ᵔ˶'
 };
 
-export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
+const faceByExpression: Record<MeloExpression, string> = {
+  calm: '• ᴗ •',
+  listening: '• ◡ •',
+  thinking: '• … •',
+  encouraging: '˶ᵔ ᵕ ᵔ˶',
+  concerned: '• ︵ •'
+};
+
+export function MeloPet({
+  mood,
+  size = 150,
+  stars = 0,
+  expression,
+  animated = true
+}: MeloPetProps) {
   const bob = useRef(new Animated.Value(0)).current;
   const breathe = useRef(new Animated.Value(1)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -30,22 +46,24 @@ export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
   }, []);
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (reduceMotion || !animated) {
       bob.stopAnimation();
       bob.setValue(0);
       return;
     }
+    const bobDistance = -Math.max(1.5, size * 0.04);
+    const bobDuration = expression === 'thinking' ? 650 : 1100;
     const bobLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(bob, {
-          toValue: -6,
-          duration: 1100,
+          toValue: bobDistance,
+          duration: bobDuration,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true
         }),
         Animated.timing(bob, {
           toValue: 0,
-          duration: 1100,
+          duration: bobDuration,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true
         })
@@ -53,12 +71,12 @@ export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
     );
     bobLoop.start();
     return () => bobLoop.stop();
-  }, [bob, reduceMotion]);
+  }, [animated, bob, expression, reduceMotion, size]);
 
   useEffect(() => {
     breathe.stopAnimation();
     breathe.setValue(1);
-    if (mood !== 'breathing' || reduceMotion) return;
+    if (mood !== 'breathing' || reduceMotion || !animated) return;
 
     const breatheLoop = Animated.loop(
       Animated.sequence([
@@ -78,7 +96,7 @@ export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
     );
     breatheLoop.start();
     return () => breatheLoop.stop();
-  }, [breathe, mood, reduceMotion]);
+  }, [animated, breathe, mood, reduceMotion]);
 
   const accessory = useMemo(() => {
     if (stars >= 15) return '👑';
@@ -120,7 +138,8 @@ export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
             {
               width: size * 0.27,
               height: size * 0.27,
-              borderRadius: size
+              borderRadius: size,
+              borderWidth: Math.max(1, Math.round(size * 0.035))
             }
           ]}
         />
@@ -131,7 +150,8 @@ export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
             {
               width: size * 0.27,
               height: size * 0.27,
-              borderRadius: size
+              borderRadius: size,
+              borderWidth: Math.max(1, Math.round(size * 0.035))
             }
           ]}
         />
@@ -141,12 +161,23 @@ export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
             {
               width: size,
               height: size * 0.82,
-              borderRadius: size * 0.42
+              borderRadius: size * 0.42,
+              borderWidth: Math.max(1, Math.round(size * 0.04))
             }
           ]}
         >
           {accessory ? <Text style={[styles.accessory, { fontSize: size * 0.2 }]}>{accessory}</Text> : null}
-          <Text style={[styles.face, { fontSize: size * 0.16 }]}>{faceByMood[mood]}</Text>
+          <Text
+            style={[
+              styles.face,
+              {
+                fontSize:
+                  expression === 'encouraging' ? size * 0.12 : size * 0.16
+              }
+            ]}
+          >
+            {expression ? faceByExpression[expression] : faceByMood[mood]}
+          </Text>
           <View style={[styles.blushRow, { top: size * 0.47 }]}>
             <View style={[styles.blush, { width: size * 0.11, height: size * 0.05 }]} />
             <View style={[styles.blush, { width: size * 0.11, height: size * 0.05 }]} />
