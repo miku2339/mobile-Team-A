@@ -5,17 +5,18 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.example.melo"
     },
     "android": {
-      "package": "com.example.melo",
-      "edgeToEdgeEnabled": true
+      "package": "com.example.melo"
     },
     "web": {
       "bundler": "metro"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

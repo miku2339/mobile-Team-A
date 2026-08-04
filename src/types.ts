@@ -1,6 +1,17 @@
-export type ProviderId = 'openai' | 'bailian' | 'bigmodel' | 'custom';
+export type ProviderId =
+  | 'openai'
+  | 'google-ai-studio'
+  | 'deepseek'
+  | 'kimi'
+  | 'minimax'
+  | 'bailian'
+  | 'bailian-coding'
+  | 'bailian-token'
+  | 'bigmodel'
+  | 'custom';
 
-export type AppLanguage = 'en' | 'zh-Hant' | 'yue';
+export type UILanguage = 'en' | 'zh-Hant' | 'zh-Hans';
+export type AppLanguage = UILanguage | 'yue';
 export type EmotionId = 'angry' | 'overwhelmed' | 'hurt' | 'anxious' | 'disappointed';
 export type RecipientId = 'friend' | 'teammate' | 'teacher' | 'family';
 export type ToneId = 'gentle' | 'direct' | 'formal';
@@ -33,5 +44,6 @@ export interface RewriteResult {
   text: string;
   source: 'ai' | 'fallback' | 'safety';
   providerLabel: string;
+  providerId?: ProviderId;
   explanation: string[];
 }

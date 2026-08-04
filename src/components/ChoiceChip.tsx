@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',

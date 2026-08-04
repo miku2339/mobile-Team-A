@@ -9,57 +9,167 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
+  useWindowDimensions
 } from 'react-native';
 
-import { PROVIDERS } from '../config/providers';
+import {
+  ALIBABA_ENDPOINTS,
+  ALIBABA_PLANS,
+  detectAlibabaRegion,
+  isAlibabaKeyCompatible,
+  isAlibabaProvider,
+  type AlibabaRegion
+} from '../config/alibaba';
+import { getTranslations, uiLanguageOptions } from '../i18n';
 import { colors, radius } from '../theme';
-import type { AISettings, ProviderId } from '../types';
+import type { AISettings, ProviderId, UILanguage } from '../types';
+import { isAllowedProviderBaseUrl } from '../utils/providerUrl';
+import {
+  selectAlibabaRegionSettings,
+  selectProviderSettings
+} from '../utils/settingsTransitions';
 import { ChoiceChip } from './ChoiceChip';
 import { PrimaryButton } from './PrimaryButton';
 
 interface AISettingsModalProps {
   visible: boolean;
   value: AISettings;
+  language: UILanguage;
   onClose: () => void;
   onSave: (settings: AISettings) => Promise<void>;
   onClear: () => Promise<void>;
+  onLanguageChange: (language: UILanguage) => Promise<void>;
 }
 
-const providerOrder: ProviderId[] = ['openai', 'bailian', 'bigmodel', 'custom'];
+type ProviderGroup =
+  | 'openai'
+  | 'google-ai-studio'
+  | 'alibaba'
+  | 'deepseek'
+  | 'kimi'
+  | 'minimax'
+  | 'bigmodel'
+  | 'custom';
+
+const providerGroups: ProviderGroup[] = [
+  'openai',
+  'google-ai-studio',
+  'alibaba',
+  'deepseek',
+  'kimi',
+  'minimax',
+  'bigmodel',
+  'custom'
+];
+
+function PlanOption({
+  label,
+  description,
+  selected,
+  onPress
+}: {
+  label: string;
+  description: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      aria-checked={selected}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.planOption,
+        selected && styles.planOptionSelected,
+        pressed && styles.planOptionPressed
+      ]}
+    >
+      <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
+        {selected ? <View style={styles.radioInner} /> : null}
+      </View>
+      <View style={styles.planOptionCopy}>
+        <Text style={[styles.planOptionTitle, selected && styles.planOptionTitleSelected]}>
+          {label}
+        </Text>
+        <Text style={styles.planOptionDescription}>{description}</Text>
+      </View>
+    </Pressable>
+  );
+}
 
 export function AISettingsModal({
   visible,
   value,
+  language,
   onClose,
   onSave,
-  onClear
+  onClear,
+  onLanguageChange
 }: AISettingsModalProps) {
+  const { width } = useWindowDimensions();
+  const compactLayout = width < 380;
   const [draft, setDraft] = useState<AISettings>(value);
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const copy = getTranslations(language);
+  const alibabaProvider = isAlibabaProvider(draft.provider) ? draft.provider : null;
+  const isAlibaba = alibabaProvider !== null;
+  const selectedProviderGroup: ProviderGroup = alibabaProvider
+    ? 'alibaba'
+    : (draft.provider as Exclude<ProviderId, 'bailian' | 'bailian-coding' | 'bailian-token'>);
+  const selectedAlibabaRegion = alibabaProvider
+    ? detectAlibabaRegion(alibabaProvider, draft.baseUrl)
+    : null;
+  const alibabaEndpoints = alibabaProvider ? ALIBABA_ENDPOINTS[alibabaProvider] : [];
 
   useEffect(() => {
-    if (visible) setDraft(value);
+    if (visible) {
+      setDraft(value);
+      setShowKey(false);
+    }
   }, [value, visible]);
 
   const selectProvider = (provider: ProviderId) => {
-    const preset = PROVIDERS[provider];
-    setDraft((current) => ({
-      ...current,
-      provider,
-      baseUrl: preset.baseUrl,
-      model: preset.model
-    }));
+    setDraft((current) => selectProviderSettings(current, provider));
+  };
+
+  const selectProviderGroup = (provider: ProviderGroup) => {
+    if (provider === 'alibaba') {
+      if (!isAlibaba) selectProvider('bailian');
+      return;
+    }
+    selectProvider(provider);
+  };
+
+  const selectAlibabaRegion = (region: AlibabaRegion) => {
+    if (!alibabaProvider) return;
+    const endpoint = ALIBABA_ENDPOINTS[alibabaProvider].find((item) => item.id === region);
+    if (!endpoint) return;
+    setDraft((current) => selectAlibabaRegionSettings(current, endpoint.id));
   };
 
   const save = async () => {
+    if (!draft.apiKey.trim()) {
+      await onSave({ ...draft, apiKey: '' });
+      onClose();
+      return;
+    }
+    if (alibabaProvider && !isAlibabaKeyCompatible(alibabaProvider, draft.apiKey)) {
+      Alert.alert(copy.settings.keyPlanMismatchTitle, copy.settings.keyPlanMismatchBody);
+      return;
+    }
     if (!draft.baseUrl.trim()) {
-      Alert.alert('Missing Base URL', 'Please enter an OpenAI-compatible Base URL.');
+      Alert.alert(copy.settings.missingBaseUrlTitle, copy.settings.missingBaseUrlBody);
+      return;
+    }
+    if (!isAllowedProviderBaseUrl(draft.baseUrl)) {
+      Alert.alert(copy.settings.unsafeUrlTitle, copy.settings.unsafeUrlBody);
       return;
     }
     if (!draft.model.trim()) {
-      Alert.alert('Missing model', 'Please enter the model ID used by your provider.');
+      Alert.alert(copy.settings.missingModelTitle, copy.settings.missingModelBody);
       return;
     }
 
@@ -80,7 +190,7 @@ export function AISettingsModal({
   const clear = async () => {
     await onClear();
     setDraft((current) => ({ ...current, apiKey: '' }));
-    Alert.alert('API key cleared', 'Melo will use its offline fallback until a new key is added.');
+    Alert.alert(copy.settings.keyClearedTitle, copy.settings.keyClearedBody);
   };
 
   return (
@@ -96,42 +206,111 @@ export function AISettingsModal({
         >
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>BRING YOUR OWN KEY</Text>
-              <Text style={styles.title}>AI provider settings</Text>
+              <Text style={styles.eyebrow}>{copy.settings.languageEyebrow}</Text>
+              <Text style={styles.title}>{copy.settings.languageTitle}</Text>
             </View>
-            <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
+            <Pressable
+              accessibilityLabel={copy.settings.close}
+              accessibilityRole="button"
+              onPress={onClose}
+              style={styles.closeButton}
+            >
               <Text style={styles.closeText}>✕</Text>
             </Pressable>
           </View>
 
-          <View style={styles.notice}>
-            <Text style={styles.noticeTitle}>Your key stays on this device</Text>
-            <Text style={styles.noticeBody}>
-              Native builds use encrypted SecureStore. Web preview keeps it only in this browser tab.
-              The key is sent directly to the provider you choose and is never included in the project code.
-            </Text>
-          </View>
-
-          <Text style={styles.sectionLabel}>Provider</Text>
+          <Text style={styles.languageBody}>{copy.settings.languageBody}</Text>
           <View style={styles.chipWrap}>
-            {providerOrder.map((provider) => (
+            {uiLanguageOptions.map((option) => (
               <ChoiceChip
-                key={provider}
-                label={PROVIDERS[provider].label}
-                selected={draft.provider === provider}
-                onPress={() => selectProvider(provider)}
+                key={option.id}
+                label={option.label}
+                selected={language === option.id}
+                onPress={() => void onLanguageChange(option.id)}
               />
             ))}
           </View>
-          <Text style={styles.hint}>{PROVIDERS[draft.provider].note}</Text>
 
-          <Text style={styles.sectionLabel}>API key</Text>
-          <View style={styles.keyRow}>
+          <View style={styles.sectionDivider} />
+          <Text style={styles.eyebrow}>{copy.settings.aiEyebrow}</Text>
+          <Text style={styles.aiTitle}>{copy.settings.title}</Text>
+
+          <View style={styles.notice}>
+            <Text style={styles.noticeTitle}>{copy.settings.noticeTitle}</Text>
+            <Text style={styles.noticeBody}>{copy.settings.noticeBody}</Text>
+          </View>
+
+          <Text style={styles.sectionLabel}>{copy.settings.provider}</Text>
+          <View style={styles.chipWrap}>
+            {providerGroups.map((provider) => (
+              <ChoiceChip
+                key={provider}
+                label={
+                  provider === 'alibaba'
+                    ? copy.settings.alibabaCloud
+                    : copy.providerNames[provider]
+                }
+                selected={selectedProviderGroup === provider}
+                onPress={() => selectProviderGroup(provider)}
+              />
+            ))}
+          </View>
+
+          {isAlibaba ? (
+            <View style={styles.alibabaPanel}>
+              <Text style={styles.planSectionTitle}>{copy.settings.alibabaPlanTitle}</Text>
+              <Text style={styles.hint}>{copy.settings.alibabaPlanBody}</Text>
+              <View accessibilityRole="radiogroup" style={styles.planList}>
+                {ALIBABA_PLANS.map((provider) => (
+                  <PlanOption
+                    key={provider}
+                    label={copy.providerNames[provider]}
+                    description={copy.providerNotes[provider]}
+                    selected={draft.provider === provider}
+                    onPress={() => selectProvider(provider)}
+                  />
+                ))}
+              </View>
+
+              <Text style={styles.planSectionTitle}>{copy.settings.alibabaRegionTitle}</Text>
+              <Text style={styles.hint}>{copy.settings.alibabaRegionBody}</Text>
+              <View style={styles.chipWrap}>
+                {alibabaEndpoints.map((endpoint) => (
+                  <ChoiceChip
+                    key={endpoint.id}
+                    label={copy.regions[endpoint.id]}
+                    selected={selectedAlibabaRegion === endpoint.id}
+                    onPress={() => selectAlibabaRegion(endpoint.id)}
+                  />
+                ))}
+              </View>
+
+              {draft.provider !== 'bailian' ? (
+                <View style={styles.restrictedPlanNotice}>
+                  <Text style={styles.restrictedPlanTitle}>
+                    {copy.settings.restrictedPlanTitle}
+                  </Text>
+                  <Text style={styles.restrictedPlanBody}>
+                    {copy.settings.restrictedPlanBody}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <Text style={styles.hint}>{copy.providerNotes[draft.provider]}</Text>
+          )}
+
+          <Text style={styles.sectionLabel}>{copy.settings.apiKey}</Text>
+          <View style={[styles.keyRow, compactLayout && styles.compactKeyRow]}>
             <TextInput
-              accessibilityLabel="API key"
+              accessibilityLabel={copy.settings.apiKey}
               autoCapitalize="none"
               autoCorrect={false}
-              placeholder="sk-… / dashscope key / BigModel key"
+              placeholder={
+                draft.provider === 'bailian-coding' || draft.provider === 'bailian-token'
+                  ? 'sk-sp-…'
+                  : copy.settings.apiKeyPlaceholder
+              }
               placeholderTextColor={colors.inkMuted}
               secureTextEntry={!showKey}
               value={draft.apiKey}
@@ -143,13 +322,15 @@ export function AISettingsModal({
               onPress={() => setShowKey((current) => !current)}
               style={styles.showButton}
             >
-              <Text style={styles.showButtonText}>{showKey ? 'Hide' : 'Show'}</Text>
+              <Text style={styles.showButtonText}>
+                {showKey ? copy.settings.hide : copy.settings.show}
+              </Text>
             </Pressable>
           </View>
 
-          <Text style={styles.sectionLabel}>Base URL</Text>
+          <Text style={styles.sectionLabel}>{copy.settings.baseUrl}</Text>
           <TextInput
-            accessibilityLabel="Base URL"
+            accessibilityLabel={copy.settings.baseUrl}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
@@ -160,12 +341,12 @@ export function AISettingsModal({
             style={styles.input}
           />
 
-          <Text style={styles.sectionLabel}>Model ID</Text>
+          <Text style={styles.sectionLabel}>{copy.settings.modelId}</Text>
           <TextInput
-            accessibilityLabel="Model ID"
+            accessibilityLabel={copy.settings.modelId}
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="e.g. gpt-5-mini / qwen-plus / glm-5.2"
+            placeholder={copy.settings.modelPlaceholder}
             placeholderTextColor={colors.inkMuted}
             value={draft.model}
             onChangeText={(model) => setDraft((current) => ({ ...current, model }))}
@@ -173,16 +354,13 @@ export function AISettingsModal({
           />
 
           <View style={styles.warningBox}>
-            <Text style={styles.warningTitle}>Prototype note</Text>
-            <Text style={styles.warningText}>
-              Direct BYOK calls are suitable for an Expo prototype. A production release should use a
-              trusted backend, rate limits, provider-specific moderation and a full privacy review.
-            </Text>
+            <Text style={styles.warningTitle}>{copy.settings.prototypeTitle}</Text>
+            <Text style={styles.warningText}>{copy.settings.prototypeBody}</Text>
           </View>
 
           <View style={styles.buttonStack}>
-            <PrimaryButton label="Save settings" onPress={save} loading={saving} />
-            <PrimaryButton label="Clear saved key" variant="danger" onPress={clear} />
+            <PrimaryButton label={copy.settings.save} onPress={save} loading={saving} />
+            <PrimaryButton label={copy.settings.clear} variant="danger" onPress={clear} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -218,10 +396,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 4
   },
+  languageBody: { color: colors.inkMuted, fontSize: 13, lineHeight: 20, marginTop: -4 },
+  sectionDivider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
+  aiTitle: {
+    color: colors.ink,
+    fontSize: 23,
+    lineHeight: 29,
+    fontWeight: '800',
+    marginTop: -5
+  },
   closeButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -245,10 +432,50 @@ const styles = StyleSheet.create({
   },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   hint: { color: colors.inkMuted, fontSize: 12, lineHeight: 17 },
+  alibabaPanel: {
+    gap: 10,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    padding: 14
+  },
+  planSectionTitle: { color: colors.ink, fontSize: 14, fontWeight: '800', marginTop: 2 },
+  planList: { gap: 8 },
+  planOption: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 11,
+    padding: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface
+  },
+  planOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  planOptionPressed: { opacity: 0.82 },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1
+  },
+  radioOuterSelected: { borderColor: colors.primary },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  planOptionCopy: { flex: 1 },
+  planOptionTitle: { color: colors.ink, fontSize: 14, fontWeight: '800' },
+  planOptionTitleSelected: { color: colors.primaryDark },
+  planOptionDescription: { color: colors.inkMuted, fontSize: 12, lineHeight: 17, marginTop: 3 },
+  restrictedPlanNotice: { backgroundColor: colors.peach, borderRadius: radius.md, padding: 12 },
+  restrictedPlanTitle: { color: colors.peachStrong, fontSize: 13, fontWeight: '800' },
+  restrictedPlanBody: { color: colors.ink, fontSize: 12, lineHeight: 18, marginTop: 4 },
   input: {
     minHeight: 50,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     paddingHorizontal: 14,
@@ -257,9 +484,11 @@ const styles = StyleSheet.create({
     fontSize: 15
   },
   keyRow: { flexDirection: 'row', gap: 8 },
+  compactKeyRow: { flexDirection: 'column' },
   keyInput: { flex: 1 },
   showButton: {
     minWidth: 68,
+    minHeight: 50,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
