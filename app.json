@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Melo",
+    "slug": "pausepal-expo",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.melo"
+    },
+    "android": {
+      "package": "com.example.melo",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
