@@ -59,10 +59,10 @@ export const PROVIDERS: Record<ProviderId, ProviderPreset> = {
   },
   bigmodel: {
     id: 'bigmodel',
-    label: '智譜 BigModel',
+    label: 'Z.ai BigModel',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     model: '',
-    note: '智譜 OpenAI-compatible endpoint.'
+    note: 'Z.ai OpenAI-compatible endpoint.'
   },
   custom: {
     id: 'custom',

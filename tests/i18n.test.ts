@@ -12,6 +12,9 @@ test('settings offers exactly English, Traditional Chinese and Simplified Chines
   assert.equal(getTranslations('en').settings.languageTitle, 'App language');
   assert.equal(getTranslations('zh-Hant').settings.languageTitle, '介面語言');
   assert.equal(getTranslations('zh-Hans').settings.languageTitle, '界面语言');
+  assert.equal(getTranslations('en').providerNames.bigmodel, 'Z.ai BigModel');
+  assert.equal(getTranslations('zh-Hant').providerNames.bigmodel, '智譜 BigModel');
+  assert.equal(getTranslations('zh-Hans').providerNames.bigmodel, '智谱 BigModel');
 });
 
 test('saved UI language accepts only the three supported locales', () => {

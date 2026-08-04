@@ -43,7 +43,7 @@
 
 > The rewrite pipeline has three layers. First, a keyword guard pauses the normal flow for obvious high-risk phrases. Second, if the user connects their own compatible model provider, Melo sends one request with the selected emotion, recipient, tone and message language. Third, if no key is present, the provider fails, times out or returns unsafe output, a deterministic multilingual fallback keeps the demonstration working.
 
-> Provider settings follow a Bring Your Own Key model. Melo does not provide API keys, model access, credits or a default model. The user selects a provider and enters the exact Model ID. Presets include OpenAI, Google AI Studio, DeepSeek, Kimi, MiniMax and Zhipu. Alibaba Cloud adds two explicit levels: billing plan and region/server; changing either clears the previous key, while Alibaba Cloud performs the final plan and region authorisation check.
+> Provider settings follow a Bring Your Own Key model. Melo does not provide API keys, model access, credits or a default model. The user selects a provider and enters the exact Model ID. Presets include OpenAI, Google AI Studio, DeepSeek, Kimi, MiniMax and Z.ai BigModel. Alibaba Cloud adds two explicit levels: billing plan and region/server; changing either clears the previous key, while Alibaba Cloud performs the final plan and region authorisation check.
 
 > Melo Chat reuses the same provider transport but never invents an offline assistant reply. It stores only the newest 24 messages on the device, sends at most the latest 8 per turn, labels every successful bubble with its provider and model, and lets the model choose only one of five validated Melo expressions.
 
