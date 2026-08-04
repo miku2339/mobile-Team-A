@@ -9,8 +9,11 @@ test('urgent-risk guard catches common direct English, Chinese and Cantonese phr
     'I hope you die',
     'I want to end it all',
     'I am going to end it all',
+    'I do not want to live anymore',
+    "I can't go on",
     'I will hurt him',
     '我要死',
+    '我撐不下去',
     '我唔想做人'
   ];
 

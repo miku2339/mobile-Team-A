@@ -16,6 +16,12 @@ export type EmotionId = 'angry' | 'overwhelmed' | 'hurt' | 'anxious' | 'disappoi
 export type RecipientId = 'friend' | 'teammate' | 'teacher' | 'family';
 export type ToneId = 'gentle' | 'direct' | 'formal';
 export type PetMood = 'idle' | 'listening' | 'checking' | 'breathing' | 'proud';
+export type MeloExpression =
+  | 'calm'
+  | 'listening'
+  | 'thinking'
+  | 'encouraging'
+  | 'concerned';
 export type RewriteFallbackReason =
   | 'no-key'
   | 'timeout'
@@ -38,6 +44,7 @@ export interface AISettings {
   apiKey: string;
   baseUrl: string;
   model: string;
+  supportsImages: boolean;
 }
 
 export interface RewriteInput {
@@ -61,3 +68,51 @@ export interface RewriteResult {
   providerRequestId?: string;
   explanation: string[];
 }
+
+export interface ChatHistoryMessage {
+  role: 'user' | 'assistant';
+  text: string;
+  image?: ChatImageAttachment;
+  expression?: MeloExpression;
+}
+
+export interface ChatImageAttachment {
+  id: string;
+  uri: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  width: number;
+  height: number;
+  fileName?: string;
+}
+
+export interface ChatSessionMessage extends ChatHistoryMessage {
+  id: string;
+  source?: 'ai' | 'safety';
+  providerId?: ProviderId;
+  model?: string;
+  providerRequestId?: string;
+}
+
+export type ChatTurnResult =
+  | {
+      status: 'message';
+      text: string;
+      source: 'ai' | 'safety';
+      providerLabel: string;
+      expression: MeloExpression;
+      providerId?: ProviderId;
+      model?: string;
+      providerRequestId?: string;
+    }
+  | {
+      status: 'unavailable';
+      reason:
+        | RewriteFallbackReason
+        | 'attachment-error'
+        | 'image-not-enabled';
+      attemptedProviderId?: ProviderId;
+      configuredProviderId?: ProviderId;
+      providerHttpStatus?: number;
+      providerErrorCode?: string;
+      providerRequestId?: string;
+    };

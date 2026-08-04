@@ -27,12 +27,19 @@ export function parseAISettings(raw: string): AISettings | null {
     if (typeof candidate.apiKey !== 'string' || candidate.apiKey.length > 4096) return null;
     if (typeof candidate.baseUrl !== 'string' || candidate.baseUrl.length > 2048) return null;
     if (typeof candidate.model !== 'string' || candidate.model.length > 256) return null;
+    if (
+      candidate.supportsImages !== undefined &&
+      typeof candidate.supportsImages !== 'boolean'
+    ) {
+      return null;
+    }
 
     return {
       provider: candidate.provider as ProviderId,
       apiKey: candidate.apiKey,
       baseUrl: candidate.baseUrl,
-      model: candidate.model
+      model: candidate.model,
+      supportsImages: candidate.supportsImages === true
     };
   } catch {
     return null;

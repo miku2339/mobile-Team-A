@@ -18,11 +18,25 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { AISettingsModal } from './src/components/AISettingsModal';
 import { ChoiceChip } from './src/components/ChoiceChip';
+import { MeloChat } from './src/components/MeloChat';
 import { MeloPet } from './src/components/MeloPet';
 import { PrimaryButton } from './src/components/PrimaryButton';
 import { PROVIDERS } from './src/config/providers';
 import { getTranslations, uiLanguageToOutputLanguage } from './src/i18n';
 import { rewriteMessage } from './src/services/ai';
+import { chatWithMelo } from './src/services/chat';
+import {
+  clearChatMessages,
+  loadChatMessages,
+  saveChatMessages
+} from './src/services/chatStorage';
+import {
+  ChatImageError,
+  clearAllChatImages,
+  deleteChatImage,
+  pickChatImage,
+  pruneChatImages
+} from './src/services/chatImages';
 import {
   clearAISettings,
   loadAISettings,
@@ -33,9 +47,13 @@ import {
   saveUILanguage
 } from './src/services/storage';
 import { colors, radius } from './src/theme';
+import { limitLocalChatMessages } from './src/utils/chatPersistence';
 import type {
   AISettings,
   AppLanguage,
+  ChatSessionMessage,
+  ChatImageAttachment,
+  ChatTurnResult,
   EmotionId,
   PetMood,
   RecipientId,
@@ -45,6 +63,15 @@ import type {
 } from './src/types';
 
 type Step = 'home' | 'draft' | 'checkin' | 'pause' | 'result';
+type AppSurface = 'rewrite' | 'chat';
+type ChatFailure = Extract<ChatTurnResult, { status: 'unavailable' }>;
+
+let chatMessageSequence = 0;
+
+function nextChatMessageId(role: 'user' | 'assistant'): string {
+  chatMessageSequence += 1;
+  return `${role}-${Date.now()}-${chatMessageSequence}`;
+}
 
 const emotionOptions: Array<{ id: EmotionId; emoji: string }> = [
   { id: 'angry', emoji: '😠' },
@@ -69,7 +96,8 @@ const initialSettings: AISettings = {
   provider: 'openai',
   apiKey: '',
   baseUrl: PROVIDERS.openai.baseUrl,
-  model: PROVIDERS.openai.model
+  model: PROVIDERS.openai.model,
+  supportsImages: false
 };
 
 function petMoodForStep(step: Step): PetMood {
@@ -136,6 +164,7 @@ export default function App() {
   const { width } = useWindowDimensions();
   const compactLayout = width < 380;
   const scrollRef = useRef<ScrollView>(null);
+  const [surface, setSurface] = useState<AppSurface>('rewrite');
   const [step, setStep] = useState<Step>('home');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AISettings>(initialSettings);
@@ -152,6 +181,18 @@ export default function App() {
   const [result, setResult] = useState<RewriteResult | null>(null);
   const [rewardedThisRun, setRewardedThisRun] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatSessionMessage[]>([]);
+  const [chatDraft, setChatDraft] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const [chatFailure, setChatFailure] = useState<ChatFailure | null>(null);
+  const [chatHydrated, setChatHydrated] = useState(false);
+  const [chatLoadSettled, setChatLoadSettled] = useState(false);
+  const [chatStorageFailed, setChatStorageFailed] = useState(false);
+  const [pendingChatImage, setPendingChatImage] =
+    useState<ChatImageAttachment | null>(null);
+  const [chatImagePicking, setChatImagePicking] = useState(false);
+  const chatInFlightRef = useRef(false);
+  const chatEpochRef = useRef(0);
   const copy = useMemo(() => getTranslations(uiLanguage), [uiLanguage]);
 
   useEffect(() => {
@@ -164,6 +205,50 @@ export default function App() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    void loadChatMessages()
+      .then((savedMessages) => {
+        if (!active) return;
+        setChatMessages(savedMessages);
+        setChatStorageFailed(false);
+        setChatHydrated(true);
+        setChatLoadSettled(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        console.warn('Melo could not load the device-local chat history.');
+        setChatStorageFailed(true);
+        setChatLoadSettled(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!chatHydrated) return;
+    const retainedImages = chatMessages.flatMap((message) =>
+      message.image ? [message.image] : []
+    );
+    void Promise.all([
+      saveChatMessages(chatMessages),
+      pruneChatImages(retainedImages)
+    ])
+      .then(() => setChatStorageFailed(false))
+      .catch(() => {
+        console.warn('Melo could not save the device-local chat history.');
+        setChatStorageFailed(true);
+      });
+  }, [chatHydrated, chatMessages]);
+
+  useEffect(() => {
+    if (settings.supportsImages || !pendingChatImage) return;
+    const image = pendingChatImage;
+    setPendingChatImage(null);
+    void deleteChatImage(image).catch(() => undefined);
+  }, [pendingChatImage, settings.supportsImages]);
 
   useEffect(() => {
     if (step !== 'pause' || pauseSeconds <= 0 || generating) return;
@@ -181,7 +266,15 @@ export default function App() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
-  }, [step]);
+  }, [step, surface]);
+
+  useEffect(() => {
+    if (surface !== 'chat') return;
+    const frame = requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [chatMessages, chatSending, surface]);
 
   const providerStatus = useMemo(() => {
     if (!settings.apiKey.trim()) return copy.home.offlineReady;
@@ -276,6 +369,7 @@ export default function App() {
     setResult(null);
     setRewardedThisRun(false);
     setCopied(false);
+    setSurface('rewrite');
     setStep('home');
   };
 
@@ -331,6 +425,186 @@ export default function App() {
     await Share.share({ message: result.text });
   };
 
+  const runChatRequest = async (history: ChatSessionMessage[]) => {
+    if (chatInFlightRef.current) return;
+    chatInFlightRef.current = true;
+    const requestEpoch = chatEpochRef.current;
+    try {
+      setChatSending(true);
+      setChatFailure(null);
+      const next = await chatWithMelo(settings, history, uiLanguage);
+      if (requestEpoch !== chatEpochRef.current) return;
+      if (next.status === 'unavailable') {
+        setChatFailure(next);
+        return;
+      }
+      setChatMessages((current) =>
+        limitLocalChatMessages([
+          ...current,
+          {
+            id: nextChatMessageId('assistant'),
+            role: 'assistant',
+            text: next.text,
+            source: next.source,
+            expression: next.expression,
+            ...(next.providerId ? { providerId: next.providerId } : {}),
+            ...(next.model ? { model: next.model } : {}),
+            ...(next.providerRequestId
+              ? { providerRequestId: next.providerRequestId }
+              : {})
+          }
+        ])
+      );
+    } catch {
+      if (requestEpoch === chatEpochRef.current) {
+        setChatFailure({
+          status: 'unavailable',
+          reason: 'network-error',
+          attemptedProviderId: settings.provider
+        });
+      }
+    } finally {
+      chatInFlightRef.current = false;
+      if (requestEpoch === chatEpochRef.current) setChatSending(false);
+    }
+  };
+
+  const sendChat = () => {
+    const text = chatDraft.trim();
+    if (
+      (!text && !pendingChatImage) ||
+      !chatLoadSettled ||
+      chatInFlightRef.current ||
+      !settings.apiKey.trim() ||
+      (pendingChatImage && !settings.supportsImages)
+    ) {
+      return;
+    }
+    const userMessage: ChatSessionMessage = {
+      id: nextChatMessageId('user'),
+      role: 'user',
+      text,
+      ...(pendingChatImage ? { image: pendingChatImage } : {})
+    };
+    const history = limitLocalChatMessages([...chatMessages, userMessage]);
+    setChatMessages(history);
+    setChatDraft('');
+    setPendingChatImage(null);
+    setChatFailure(null);
+    void runChatRequest(history);
+  };
+
+  const retryChat = () => {
+    if (
+      !chatLoadSettled ||
+      chatInFlightRef.current ||
+      !settings.apiKey.trim()
+    ) {
+      return;
+    }
+    const latest = chatMessages.at(-1);
+    if (!latest || latest.role !== 'user') return;
+    void runChatRequest(chatMessages);
+  };
+
+  const performClearChat = () => {
+    chatEpochRef.current += 1;
+    setChatMessages([]);
+    setChatDraft('');
+    setChatFailure(null);
+    setChatSending(false);
+    setPendingChatImage(null);
+    void Promise.all([clearChatMessages(), clearAllChatImages()])
+      .then(() => setChatStorageFailed(false))
+      .catch(() => {
+        console.warn('Melo could not clear every device-local chat item.');
+        setChatStorageFailed(true);
+      });
+  };
+
+  const clearChat = () => {
+    Alert.alert(copy.chat.clearConfirmTitle, copy.chat.clearConfirmBody, [
+      { text: copy.chat.cancel, style: 'cancel' },
+      {
+        text: copy.chat.clearConfirm,
+        style: 'destructive',
+        onPress: performClearChat
+      }
+    ]);
+  };
+
+  const rewriteLatestChatMessage = () => {
+    const latest = [...chatMessages]
+      .reverse()
+      .find((message) => message.role === 'user');
+    if (latest) setDraft(latest.text);
+    setResult(null);
+    setCopied(false);
+    setSurface('rewrite');
+    setStep('draft');
+  };
+
+  const attachChatImage = async () => {
+    if (!chatLoadSettled) return;
+    if (!settings.supportsImages) {
+      Alert.alert(
+        copy.settings.imageInputTitle,
+        copy.chat.imageNotEnabledBody
+      );
+      return;
+    }
+    try {
+      setChatImagePicking(true);
+      const image = await pickChatImage();
+      if (!image) return;
+      if (pendingChatImage) await deleteChatImage(pendingChatImage);
+      setPendingChatImage(image);
+      setChatFailure(null);
+    } catch (error) {
+      Alert.alert(
+        copy.chat.imagePickerErrorTitle,
+        error instanceof ChatImageError && error.code === 'too-large'
+          ? copy.chat.imageTooLargeBody
+          : copy.chat.imagePickerErrorBody
+      );
+    } finally {
+      setChatImagePicking(false);
+    }
+  };
+
+  const removePendingChatImage = async () => {
+    if (!pendingChatImage) return;
+    const image = pendingChatImage;
+    setPendingChatImage(null);
+    try {
+      await deleteChatImage(image);
+    } catch {
+      console.warn('Melo could not remove a pending device-local image.');
+    }
+  };
+
+  const removeLatestChatImage = async () => {
+    const latest = [...chatMessages]
+      .reverse()
+      .find((message) => message.role === 'user' && message.image);
+    if (!latest?.image) return;
+    const image = latest.image;
+    setChatMessages((current) =>
+      current.flatMap((message) => {
+        if (message.id !== latest.id) return [message];
+        if (!message.text.trim()) return [];
+        const { image: _image, ...withoutImage } = message;
+        return [withoutImage];
+      })
+    );
+    setChatFailure(null);
+    try {
+      await deleteChatImage(image);
+    } catch {
+      console.warn('Melo could not remove a saved device-local image.');
+    }
+  };
+
   const saveSettings = async (next: AISettings) => {
     setSettings(next);
     await saveAISettings(next);
@@ -359,57 +633,83 @@ export default function App() {
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-        <AppHeader
-          stars={stars}
-          tagline={copy.brandTagline}
-          settingsAccessibility={copy.settingsAccessibility}
-          onSettings={() => setSettingsOpen(true)}
-        />
+          <AppHeader
+            stars={stars}
+            tagline={copy.brandTagline}
+            settingsAccessibility={copy.settingsAccessibility}
+            onSettings={() => setSettingsOpen(true)}
+          />
 
-        <ScrollView
-          ref={scrollRef}
-          style={styles.flex}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.petSection}>
-            <MeloPet mood={mood} size={step === 'home' ? 136 : 104} stars={stars} />
-            <View style={styles.speechBubble}>
-              <Text style={styles.speechText}>{petLine}</Text>
-            </View>
-          </View>
-
-          {step === 'home' ? (
-            <View style={styles.panel}>
-              <Text style={styles.heroTitle}>{copy.home.heroTitle}</Text>
-              <Text style={styles.bodyText}>{copy.home.body}</Text>
-
-              <PrimaryButton label={copy.home.start} onPress={() => setStep('draft')} />
-              <PrimaryButton
-                label={copy.home.configure}
-                variant="ghost"
-                onPress={() => setSettingsOpen(true)}
-              />
-
-              <View style={styles.statusCard}>
-                <View style={[styles.statusDot, settings.apiKey ? styles.statusDotOnline : null]} />
-                <View style={styles.statusCopy}>
-                  <Text style={styles.statusTitle}>{providerStatus}</Text>
-                  <Text style={styles.statusSub}>
-                    {settings.apiKey
-                      ? copy.home.aiStatus
-                      : copy.home.offlineStatus}
-                  </Text>
+          {surface === 'chat' ? (
+            <MeloChat
+              copy={copy}
+              messages={chatMessages}
+              draft={chatDraft}
+              sending={chatSending}
+              failure={chatFailure}
+              memoryReady={chatLoadSettled}
+              memoryUnavailable={chatStorageFailed}
+              pendingImage={pendingChatImage}
+              imageInputEnabled={settings.supportsImages}
+              imagePicking={chatImagePicking}
+              stars={stars}
+              providerName={providerName}
+              providerConfigured={settings.apiKey.trim().length > 0}
+              onDraftChange={setChatDraft}
+              onSend={sendChat}
+              onRetry={retryChat}
+              onClear={clearChat}
+              onAttachImage={() => void attachChatImage()}
+              onRemoveImage={() => void removePendingChatImage()}
+              onRemoveLatestImage={() => void removeLatestChatImage()}
+              onConfigure={() => setSettingsOpen(true)}
+              onBack={() => setSurface('rewrite')}
+              onRewriteLatest={rewriteLatestChatMessage}
+            />
+          ) : (
+            <ScrollView
+              ref={scrollRef}
+              style={styles.flex}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.petSection}>
+                <MeloPet mood={mood} size={step === 'home' ? 136 : 104} stars={stars} />
+                <View style={styles.speechBubble}>
+                  <Text style={styles.speechText}>{petLine}</Text>
                 </View>
               </View>
 
-              <View style={styles.noGuiltCard}>
-                <Text style={styles.noGuiltTitle}>{copy.home.noGuiltTitle}</Text>
-                <Text style={styles.noGuiltText}>{copy.home.noGuiltBody}</Text>
-              </View>
-            </View>
-          ) : null}
+              {step === 'home' ? (
+                <View style={styles.panel}>
+                  <Text style={styles.heroTitle}>{copy.home.heroTitle}</Text>
+                  <Text style={styles.bodyText}>{copy.home.body}</Text>
 
+                  <PrimaryButton label={copy.home.start} onPress={() => setStep('draft')} />
+                  <PrimaryButton
+                    label={copy.home.chat}
+                    variant="secondary"
+                    onPress={() => setSurface('chat')}
+                  />
+
+                  <View style={styles.statusCard}>
+                    <View style={[styles.statusDot, settings.apiKey ? styles.statusDotOnline : null]} />
+                    <View style={styles.statusCopy}>
+                      <Text style={styles.statusTitle}>{providerStatus}</Text>
+                      <Text style={styles.statusSub}>
+                        {settings.apiKey
+                          ? copy.home.aiStatus
+                          : copy.home.offlineStatus}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.noGuiltCard}>
+                    <Text style={styles.noGuiltTitle}>{copy.home.noGuiltTitle}</Text>
+                    <Text style={styles.noGuiltText}>{copy.home.noGuiltBody}</Text>
+                  </View>
+                </View>
+              ) : null}
           {step === 'draft' ? (
             <View style={styles.panel}>
               <ProgressDots current={1} label={copy.progress(1)} />
@@ -644,10 +944,9 @@ export default function App() {
             </View>
           ) : null}
 
-          <Text style={styles.footerNote}>
-            {footerText}
-          </Text>
-        </ScrollView>
+              <Text style={styles.footerNote}>{footerText}</Text>
+            </ScrollView>
+          )}
         </KeyboardAvoidingView>
 
         <AISettingsModal

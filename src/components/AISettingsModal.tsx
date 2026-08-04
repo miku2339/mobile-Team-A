@@ -359,9 +359,59 @@ export function AISettingsModal({
             placeholder={copy.settings.modelPlaceholder}
             placeholderTextColor={colors.inkMuted}
             value={draft.model}
-            onChangeText={(model) => setDraft((current) => ({ ...current, model }))}
+            onChangeText={(model) =>
+              setDraft((current) => ({
+                ...current,
+                model,
+                supportsImages:
+                  model === current.model ? current.supportsImages : false
+              }))
+            }
             style={styles.input}
           />
+
+          <Pressable
+            accessibilityRole="switch"
+            accessibilityState={{ checked: draft.supportsImages }}
+            onPress={() =>
+              setDraft((current) => ({
+                ...current,
+                supportsImages: !current.supportsImages
+              }))
+            }
+            style={({ pressed }) => [
+              styles.capabilityRow,
+              draft.supportsImages && styles.capabilityRowEnabled,
+              pressed && styles.planOptionPressed
+            ]}
+          >
+            <View style={styles.capabilityCopy}>
+              <Text style={styles.capabilityTitle}>
+                {copy.settings.imageInputTitle}
+              </Text>
+              <Text style={styles.capabilityBody}>
+                {copy.settings.imageInputBody}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.switchTrack,
+                draft.supportsImages && styles.switchTrackEnabled
+              ]}
+            >
+              <View
+                style={[
+                  styles.switchThumb,
+                  draft.supportsImages && styles.switchThumbEnabled
+                ]}
+              />
+            </View>
+            <Text style={styles.capabilityState}>
+              {draft.supportsImages
+                ? copy.settings.imageInputOn
+                : copy.settings.imageInputOff}
+            </Text>
+          </Pressable>
 
           <View style={styles.warningBox}>
             <Text style={styles.warningTitle}>{copy.settings.prototypeTitle}</Text>
@@ -505,6 +555,42 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft
   },
   showButtonText: { color: colors.primaryDark, fontWeight: '800' },
+  capabilityRow: {
+    minHeight: 82,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+    padding: 13,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface
+  },
+  capabilityRowEnabled: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft
+  },
+  capabilityCopy: { flex: 1, minWidth: 210 },
+  capabilityTitle: { color: colors.ink, fontSize: 14, fontWeight: '900' },
+  capabilityBody: { color: colors.inkMuted, fontSize: 11, lineHeight: 16, marginTop: 3 },
+  switchTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    padding: 3,
+    justifyContent: 'center',
+    backgroundColor: colors.borderStrong
+  },
+  switchTrackEnabled: { backgroundColor: colors.primary },
+  switchThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.surface
+  },
+  switchThumbEnabled: { alignSelf: 'flex-end' },
+  capabilityState: { color: colors.primaryDark, fontSize: 11, fontWeight: '900' },
   warningBox: {
     backgroundColor: colors.peach,
     borderRadius: radius.md,

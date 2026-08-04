@@ -17,7 +17,8 @@ test('offline mode has no successful or attempted provider attribution', async (
       provider: 'openai',
       apiKey: '',
       baseUrl: 'https://api.openai.com/v1',
-      model: 'user-model'
+      model: 'user-model',
+      supportsImages: false
     },
     rewriteInput
   );
@@ -44,7 +45,8 @@ test('unsafe provider output is blocked before it can be copied or shared', asyn
         provider: 'custom',
         apiKey: 'test-key',
         baseUrl: 'https://provider.example/v1',
-        model: 'test-model'
+        model: 'test-model',
+        supportsImages: false
       },
       {
         draft: 'Please finish your part of our group project.',
@@ -79,7 +81,8 @@ test('provider timeout is disclosed as fallback and never attributed as AI outpu
         provider: 'bailian-coding',
         apiKey: 'test-key',
         baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',
-        model: 'user-model'
+        model: 'user-model',
+        supportsImages: false
       },
       {
         draft: 'You never do any work.',
@@ -111,7 +114,8 @@ test('provider network errors are disclosed without claiming an AI result', asyn
         provider: 'deepseek',
         apiKey: 'test-key',
         baseUrl: 'https://api.deepseek.com',
-        model: 'user-model'
+        model: 'user-model',
+        supportsImages: false
       },
       rewriteInput
     );
@@ -151,7 +155,8 @@ test('provider HTTP errors expose only safe diagnostics', async () => {
         provider: 'bailian-coding',
         apiKey: 'test-key',
         baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',
-        model: 'qwen3-coder-plus'
+        model: 'qwen3-coder-plus',
+        supportsImages: false
       },
       rewriteInput
     );
@@ -189,7 +194,8 @@ test('unsafe provider error details are discarded', async () => {
         provider: 'bailian-coding',
         apiKey: 'test-key',
         baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',
-        model: 'qwen3-coder-plus'
+        model: 'qwen3-coder-plus',
+        supportsImages: false
       },
       rewriteInput
     );
@@ -221,7 +227,8 @@ test('invalid successful provider payload is distinguished from a network failur
         provider: 'custom',
         apiKey: 'test-key',
         baseUrl: 'https://provider.example/v1',
-        model: 'test-model'
+        model: 'test-model',
+        supportsImages: false
       },
       rewriteInput
     );
@@ -248,7 +255,8 @@ test('invalid local provider settings never claim a request was attempted', asyn
         provider: 'bailian-coding',
         apiKey: 'test-key',
         baseUrl: 'not-a-url',
-        model: ''
+        model: '',
+        supportsImages: false
       },
       rewriteInput
     );
@@ -277,7 +285,8 @@ test('named providers reject an unrelated host before transmitting a key', async
         provider: 'bailian-coding',
         apiKey: 'test-key',
         baseUrl: 'https://attacker.example/v1',
-        model: 'qwen3-coder-plus'
+        model: 'qwen3-coder-plus',
+        supportsImages: false
       },
       rewriteInput
     );
@@ -316,7 +325,8 @@ test('provider request contract uses one chat-completions path and the selected 
         provider: 'bailian-coding',
         apiKey: 'test-key',
         baseUrl: 'https://coding.dashscope.aliyuncs.com/v1/chat/completions',
-        model: 'qwen3-coder-plus'
+        model: 'qwen3-coder-plus',
+        supportsImages: false
       },
       rewriteInput
     );
@@ -364,7 +374,8 @@ test('provider output explicitly truncated by length is not treated as AI succes
         provider: 'custom',
         apiKey: 'test-key',
         baseUrl: 'https://provider.example/v1',
-        model: 'test-model'
+        model: 'test-model',
+        supportsImages: false
       },
       rewriteInput
     );
@@ -398,7 +409,8 @@ test('provider requests are not aborted at the old eight-second boundary', async
         provider: 'bailian-coding',
         apiKey: 'test-key',
         baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',
-        model: 'user-model'
+        model: 'user-model',
+        supportsImages: false
       },
       {
         draft: 'You never do any work.',
@@ -435,7 +447,8 @@ test('AI result keeps the provider that generated it', async () => {
         provider: 'deepseek',
         apiKey: 'test-key',
         baseUrl: 'https://api.deepseek.com',
-        model: 'user-model'
+        model: 'user-model',
+        supportsImages: false
       },
       {
         draft: 'You never do any work.',
