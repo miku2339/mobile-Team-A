@@ -24,7 +24,7 @@ Melo 是一隻不會以飢餓、死亡或連續簽到向用戶施壓的虛擬寵
 
 ## 開始使用
 
-需要 Node.js 及 Expo Go。
+需要 Node.js 及 Expo Go。本 Demo 特意使用 **Expo SDK 54**；Expo 在 SDK 57 過渡期建議真機 Expo Go 專案使用 SDK 54，詳見 [Expo 官方說明](https://docs.expo.dev/get-started/create-a-project/)。
 
 ```bash
 npm install
@@ -58,11 +58,12 @@ npx expo-doctor
 
 - TypeScript type-check 通過
 - 19 項 deterministic regression tests 全部通過
-- Expo Doctor 20／20 通過
+- Expo Doctor 的 SDK 54 檢查 18／18 通過
 - Web、iOS、Android production export 全部成功
 - 以 390 × 844 手機尺寸完整操作離線黃金流程，包括三種介面語言、Provider 選擇、阿里雲 Plan／地區切換、Before／After、Copy 回饋與 Calm Stars
+- 經明確授權後，以合成且不含敏感資料的草稿，使用 `qwen3-coder-plus` 對阿里雲百鍊 Coding Plan 中國區完成一次真實 `rewriteMessage` adapter smoke test；結果為 `source: ai`，不是 fallback。憑證沒有寫入 repository 或文件
 
-以上證明 source 與離線 Demo 已就緒；**尚未**代表 Expo Go 真機或任何真實 Provider 帳戶已完成端到端驗證，這兩項仍是清楚分開的 release gates。
+以上證明 source／離線 Demo 與 Provider adapter 真實帳戶路徑已就緒；Expo Go 真機，以及真機設定到結果的完整 Provider UI 流程仍待畫面確認。
 
 ## API provider 設定
 
@@ -128,8 +129,8 @@ Melo 可以攔截一般 key 與 `sk-sp-` 套餐 key 這種明顯不相符，但�
 
 ## 下一步開發優先次序
 
-1. 先在真機跑通 Expo Go
-2. 以一個已授權的按量付費 Provider 帳戶完成端到端測試
+1. 先在真機跑通 SDK 54 Expo Go
+2. 在該真機重跑已授權 Provider 的設定到結果完整流程，之後清除已儲存 key
 3. 為 provider 加入 Test Connection
 4. 改善危機情境頁面與地區化支援資源
 5. 加入真正的寵物房間／飾物，但保持無懲罰設計
@@ -143,9 +144,9 @@ Melo 可以攔截一般 key 與 `sk-sp-` 套餐 key 這種明顯不相符，但�
 - 直接由 client 呼叫 Provider 只適合 prototype；Web 亦可能受到 CORS 限制
 - 安全 guard 只是關鍵字規則，可能漏判或誤判，不能作臨床風險評估
 - 離線 fallback 只對固定小組項目 Demo 及常見模式有較具體的理解，不是完整自然語言模型
-- 此分支尚未以真實 Provider 帳戶完成端到端驗證
+- 真實帳戶 smoke test 只覆蓋一次性本機程序內的 Provider adapter；尚未在真機完成設定到結果的整段流程
 - Calm Star 目前只提供三個簡單配件門檻
-- `npm audit` 目前回報 Expo 間接 build-tool chain 的 10 個 moderate advisories；建議的強制修復會降級 Expo，因此沒有套用
+- `npm audit` 目前回報 Expo 54 間接 build-tool chain 的 10 個 moderate 及 1 個 high advisory；自動 major-version 修復會把專案升回目前不符合真機 Expo Go 要求的 Expo 57，因此沒有盲目套用
 - 尚未加入帳戶、雲端同步、分析儀表板或訊息歷史
 
 ## 專案結構

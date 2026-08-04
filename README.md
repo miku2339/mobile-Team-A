@@ -93,6 +93,8 @@ Melo rewards positive actions without punishing absence.
 - npm
 - Expo Go on an iPhone or Android device, or a local simulator/emulator
 
+This demo intentionally targets **Expo SDK 54**. During the SDK 57 transition, Expo recommends SDK 54 for Expo Go on physical devices; see the [official Expo project guide](https://docs.expo.dev/get-started/create-a-project/).
+
 ### Install and run
 
 ```bash
@@ -129,11 +131,12 @@ Verified on this branch on 4 August 2026:
 
 - TypeScript type-check passes;
 - all 19 deterministic regression tests pass;
-- Expo Doctor passes all 20 checks;
+- Expo Doctor passes all 18 SDK 54 checks;
 - Web, iOS and Android production exports complete successfully;
-- the complete offline golden path was exercised at a 390 × 844 mobile viewport, including three interface languages, provider selection, Alibaba plan/region switching, Before/After, Copy feedback and Calm Stars.
+- the complete offline golden path was exercised at a 390 × 844 mobile viewport, including three interface languages, provider selection, Alibaba plan/region switching, Before/After, Copy feedback and Calm Stars;
+- one explicitly authorised Alibaba Cloud Coding Plan China smoke test passed through Melo's real `rewriteMessage` adapter with `qwen3-coder-plus`, a synthetic non-sensitive draft and `source: ai` rather than fallback. No credential was written to the repository or documentation.
 
-These checks prove source and offline-demo readiness. They do **not** yet prove a physical-device Expo Go run or an end-to-end request with a real provider account; those remain explicit release gates.
+These checks prove source/offline-demo readiness and the provider adapter's real-account path. A physical-device Expo Go run and the combined on-device provider UI flow still require visible confirmation.
 
 ## AI Provider Setup
 
@@ -392,15 +395,15 @@ Then open a pull request or coordinate with the team before merging into `main`.
 - Some providers may block browser requests because of CORS restrictions.
 - The safety guard is intentionally basic and can miss or misclassify risk.
 - The offline fallback recognises the fixed group-project demo and common patterns, but is not full natural-language understanding.
-- No real provider account has yet been validated end to end in this branch.
-- `npm audit` currently reports 10 moderate advisories in Expo's transitive build-tool chain; the suggested forced fix would downgrade Expo and has not been applied.
+- The real-account smoke test covered the provider adapter in a one-off local process; it has not yet been repeated through the complete settings-to-result flow on a physical phone.
+- `npm audit` currently reports 10 moderate and 1 high advisory in Expo 54's transitive build-tool chain. The automated major-version fix returns the project to Expo 57, which currently conflicts with the physical-device Expo Go requirement, so it has not been applied blindly.
 - Calm Star progression currently unlocks only a few simple accessories.
 - There is no account system, cloud synchronisation, analytics dashboard or message history.
 
 ## Development Priorities
 
-1. Confirm that the app runs reliably in Expo Go on a physical phone.
-2. Test one authorised pay-as-you-go provider end-to-end; do not use a plan outside its provider policy.
+1. Confirm that the SDK 54 app runs reliably in Expo Go on a physical phone.
+2. Repeat the authorised provider test through the complete settings-to-result flow on that phone, then clear the saved key.
 3. Add a **Test Connection** action to provider settings.
 4. Improve the high-risk support screen and localise support resources.
 5. Refine the pet visuals and accessory system without adding guilt mechanics.

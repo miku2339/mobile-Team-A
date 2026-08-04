@@ -197,6 +197,12 @@ export async function rewriteMessage(
         ]
       };
     }
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('Melo provider rewrite succeeded.', {
+        provider: settings.provider,
+        outputLength: text.length
+      });
+    }
     return {
       text,
       source: 'ai',
