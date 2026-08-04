@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme';
 import type { PetMood } from '../types';
@@ -21,8 +21,20 @@ const faceByMood: Record<PetMood, string> = {
 export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
   const bob = useRef(new Animated.Value(0)).current;
   const breathe = useRef(new Animated.Value(1)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      bob.stopAnimation();
+      bob.setValue(0);
+      return;
+    }
     const bobLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(bob, {
@@ -41,12 +53,12 @@ export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
     );
     bobLoop.start();
     return () => bobLoop.stop();
-  }, [bob]);
+  }, [bob, reduceMotion]);
 
   useEffect(() => {
     breathe.stopAnimation();
     breathe.setValue(1);
-    if (mood !== 'breathing') return;
+    if (mood !== 'breathing' || reduceMotion) return;
 
     const breatheLoop = Animated.loop(
       Animated.sequence([
@@ -66,7 +78,7 @@ export function MeloPet({ mood, size = 150, stars = 0 }: MeloPetProps) {
     );
     breatheLoop.start();
     return () => breatheLoop.stop();
-  }, [breathe, mood]);
+  }, [breathe, mood, reduceMotion]);
 
   const accessory = useMemo(() => {
     if (stars >= 15) return '👑';

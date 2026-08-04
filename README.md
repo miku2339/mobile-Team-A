@@ -67,13 +67,18 @@ Melo rewards positive actions without punishing absence.
 - Twelve-second guided breathing interaction
 - Calm Stars and simple accessory progression
 - AI-assisted message rewriting
-- Bring Your Own Key (**BYOK**) provider settings
-- OpenAI support
-- Alibaba Cloud Model Studio / Bailian support
-- Zhipu AI BigModel support
-- Custom OpenAI-compatible endpoint support
+- Bring Your Own Key (**BYOK**) provider settings; Melo provides no model service, key, credits or default model
+- OpenAI and Google AI Studio connection presets for compatible Chat Completions endpoints
+- Alibaba Cloud Model Studio / Bailian with separate Pay-as-you-go, Coding Plan and Token Plan menus
+- Alibaba Cloud plan-aware region/server selection
+- DeepSeek, Kimi and MiniMax compatible endpoint presets
+- Zhipu AI BigModel endpoint preset
+- User-configured OpenAI-compatible endpoint
 - User-editable API key, Base URL and model ID
-- English, Traditional Chinese and written Cantonese output
+- English, Traditional Chinese and Simplified Chinese interface switching
+- English, Traditional Chinese, Simplified Chinese and written Cantonese output
+- Before/After review, visible Copy feedback and a deterministic group-project demo
+- Responsive 320 px layouts, cross-platform safe areas and Reduce Motion support
 - Copy and native Share actions
 - Offline rewrite fallback when no API key is available
 - Basic prototype safety keyword guard
@@ -87,6 +92,8 @@ Melo rewards positive actions without punishing absence.
 - Node.js — an LTS release is recommended
 - npm
 - Expo Go on an iPhone or Android device, or a local simulator/emulator
+
+This demo intentionally targets **Expo SDK 54**. During the SDK 57 transition, Expo recommends SDK 54 for Expo Go on physical devices; see the [official Expo project guide](https://docs.expo.dev/get-started/create-a-project/).
 
 ### Install and run
 
@@ -110,28 +117,62 @@ If Expo reports dependency-version mismatches, run:
 npx expo install --fix
 ```
 
-A TypeScript check is also available:
+A full local quality check is available:
 
 ```bash
 npm run typecheck
+npm test
+npx expo-doctor
 ```
+
+## Validation Status
+
+Verified on this branch on 4 August 2026:
+
+- TypeScript type-check passes;
+- all 19 deterministic regression tests pass;
+- Expo Doctor passes all 18 SDK 54 checks;
+- Web, iOS and Android production exports complete successfully;
+- the complete offline golden path was exercised at a 390 × 844 mobile viewport, including three interface languages, provider selection, Alibaba plan/region switching, Before/After, Copy feedback and Calm Stars;
+- one explicitly authorised Alibaba Cloud Coding Plan China smoke test passed through Melo's real `rewriteMessage` adapter with `qwen3-coder-plus`, a synthetic non-sensitive draft and `source: ai` rather than fallback. No credential was written to the repository or documentation.
+
+These checks prove source/offline-demo readiness and the provider adapter's real-account path. A physical-device Expo Go run and the combined on-device provider UI flow still require visible confirmation.
 
 ## AI Provider Setup
 
-Open the gear icon in the top-right corner of the app, choose a provider, and enter:
+Open the gear icon in the top-right corner of the app. Following a BYOK connection flow, choose the provider and enter:
 
 - **API key**
 - **Base URL**
 - **Model ID**
 
-Configured examples:
+Melo only supplies endpoint presets. It does **not** supply a model, API key, credits, proxy or default Model ID.
 
-| Provider | Default Base URL | Example model |
+Configured provider endpoints:
+
+| Provider | Preset Base URL | Model ID |
 |---|---|---|
-| OpenAI | `https://api.openai.com/v1` | `gpt-5-mini` |
-| Alibaba Cloud Model Studio / Bailian | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
-| Zhipu AI BigModel | `https://open.bigmodel.cn/api/paas/v4` | `glm-5.2` |
+| [OpenAI](https://platform.openai.com/docs/api-reference/chat) | `https://api.openai.com/v1` | User supplied |
+| [Google AI Studio](https://ai.google.dev/gemini-api/docs/openai) | `https://generativelanguage.googleapis.com/v1beta/openai` | User supplied |
+| Alibaba Cloud Model Studio | Selected from plan + region menus | User supplied |
+| [DeepSeek](https://api-docs.deepseek.com/) | `https://api.deepseek.com` | User supplied |
+| [Kimi](https://platform.kimi.com/docs/overview) | `https://api.moonshot.cn/v1` | User supplied |
+| [MiniMax](https://platform.minimaxi.com/docs/api-reference/text-chat-openai) | `https://api.minimaxi.com/v1` | User supplied |
+| Zhipu AI BigModel | `https://open.bigmodel.cn/api/paas/v4` | User supplied |
 | Custom provider | User supplied | User supplied |
+
+### Alibaba Cloud plan and region selection
+
+Alibaba Cloud is deliberately split into two selectors:
+
+1. **Plan:** Pay-as-you-go, Coding Plan or Token Plan
+2. **Region/server:** only endpoints available for that plan
+
+Pay-as-you-go includes China (Beijing), Singapore, US (Virginia), and a workspace/custom endpoint. Coding Plan and Token Plan expose their documented China and international endpoints. Changing the plan or region clears the previous key because plan and regional credentials are not interchangeable.
+
+Melo can reject an obvious standard-key versus `sk-sp-` plan-key mismatch. It cannot infer the exact Coding/Token plan or region from the key text; Alibaba Cloud remains the authority that validates the key's actual plan and regional scope.
+
+Coding Plan and Token Plan remain selectable at the user's request, but the UI shows an important provider-policy warning: Alibaba Cloud documents these plans for supported interactive coding/agent tools, not custom applications. Using them outside that scope may suspend the plan or key. For Melo, Pay-as-you-go is the appropriate Alibaba Cloud option for an authorised custom-app API call. See the official [Alibaba Cloud Base URL overview](https://help.aliyun.com/en/model-studio/base-url) and [third-party tool connection policy](https://www.alibabacloud.com/help/en/model-studio/more-tools).
 
 The app sends requests to:
 
@@ -141,7 +182,7 @@ The app sends requests to:
 
 The selected service therefore needs to provide an OpenAI-compatible Chat Completions endpoint.
 
-Provider regions, accounts and workspaces may require a different Base URL or model name. Both fields are editable inside the app.
+Provider regions, accounts and workspaces may require a different Base URL or model name. Both fields remain editable inside the app.
 
 ### Important API-key rule
 
@@ -153,6 +194,8 @@ The current prototype stores settings as follows:
 - **Web:** browser session storage, cleared when the browser session ends.
 
 For this prototype, the app communicates directly with the provider selected by the user. A production application should use a trusted backend instead.
+
+The provider flow is inspired by the separation used in Qoder's BYOK custom-model setup: provider first, then connection details supplied by the user. Unlike Qoder's hosted tiers, Melo offers no built-in model service. See [Qoder Custom Models](https://docs.qoder.com/user-guide/chat/custom-models).
 
 ## Offline Fallback
 
@@ -187,7 +230,7 @@ Then demonstrate:
 4. the rewritten message;
 5. the explanation of the healthier wording;
 6. Copy or Share;
-7. the Calm Star reward and pet progression.
+7. the one-star reward, while explaining that accessories unlock at 3, 7 and 15 Calm Stars.
 
 A demo-speed button can skip the full breathing wait while still showing the interaction.
 
@@ -210,7 +253,7 @@ React Native / Expo client
         └── Local offline fallback when AI is unavailable
 ```
 
-The provider adapter is intentionally shared across OpenAI, Bailian, BigModel and custom compatible services. Provider-specific defaults are stored separately from the rewrite logic.
+The provider adapter is intentionally shared across OpenAI, Google AI Studio, Alibaba Cloud, DeepSeek, Kimi, MiniMax, BigModel and custom compatible services. Provider-specific endpoint presets are stored separately from the rewrite logic, and every Model ID remains user supplied.
 
 ## Safety and Privacy Boundaries
 
@@ -246,7 +289,10 @@ src/components/MeloPet.tsx
   Animated virtual pet, mood states and accessories
 
 src/components/AISettingsModal.tsx
-  BYOK provider, API key, Base URL and model settings
+  Interface language and BYOK connection settings
+
+src/config/alibaba.ts
+  Alibaba Cloud plan, region and endpoint mappings
 
 src/components/ChoiceChip.tsx
   Reusable option selector
@@ -255,7 +301,10 @@ src/components/PrimaryButton.tsx
   Reusable button component
 
 src/config/providers.ts
-  Provider names, default URLs and example models
+  Provider names and endpoint presets; no default models
+
+src/i18n.ts
+  Type-safe English, Traditional Chinese and Simplified Chinese UI copy
 
 src/services/ai.ts
   Prompt construction and OpenAI-compatible API adapter
@@ -269,6 +318,21 @@ src/services/safety.ts
 src/utils/fallback.ts
   Offline multilingual message templates
 
+src/utils/providerUrl.ts
+  HTTPS and localhost Base URL validation
+
+src/utils/settingsValidation.ts
+  Persisted provider-setting schema validation
+
+src/utils/settingsTransitions.ts
+  Credential-safe provider and Alibaba region transitions
+
+tests/
+  Deterministic provider, fallback, localisation and safety regression tests
+
+.github/workflows/quality.yml
+  Type-check, tests, Expo Doctor and Web/iOS/Android export gates
+
 src/theme.ts
   Shared colour and spacing tokens
 
@@ -280,6 +344,12 @@ PROJECT_NOTES.md
 
 DEMO_SCRIPT.md
   A short English presentation and live-demo script
+
+PITCH.md
+  An 8–10 minute competition pitch and Q&A prompts
+
+DESIGN_SYSTEM.md
+  UI tokens, interaction rules, localisation and accessibility criteria
 ```
 
 ## Team Collaboration Guide
@@ -320,23 +390,25 @@ Then open a pull request or coordinate with the team before merging into `main`.
 
 ## Current Limitations
 
-- The project has not yet been fully validated on every physical device.
+- No physical-device Expo Go run has yet been completed on this branch.
 - Direct client-to-provider API calls are suitable only for a prototype.
 - Some providers may block browser requests because of CORS restrictions.
 - The safety guard is intentionally basic and can miss or misclassify risk.
-- The offline fallback does not deeply interpret the original message.
+- The offline fallback recognises the fixed group-project demo and common patterns, but is not full natural-language understanding.
+- The real-account smoke test covered the provider adapter in a one-off local process; it has not yet been repeated through the complete settings-to-result flow on a physical phone.
+- `npm audit` currently reports 10 moderate and 1 high advisory in Expo 54's transitive build-tool chain. The automated major-version fix returns the project to Expo 57, which currently conflicts with the physical-device Expo Go requirement, so it has not been applied blindly.
 - Calm Star progression currently unlocks only a few simple accessories.
 - There is no account system, cloud synchronisation, analytics dashboard or message history.
 
 ## Development Priorities
 
-1. Confirm that the app runs reliably in Expo Go on a physical phone.
-2. Test at least one real provider end-to-end.
+1. Confirm that the SDK 54 app runs reliably in Expo Go on a physical phone.
+2. Repeat the authorised provider test through the complete settings-to-result flow on that phone, then clear the saved key.
 3. Add a **Test Connection** action to provider settings.
 4. Improve the high-risk support screen and localise support resources.
 5. Refine the pet visuals and accessory system without adding guilt mechanics.
 6. Improve accessibility, including larger text and clearer contrast options.
-7. Add automated tests for fallback, provider parsing and safety logic.
+7. Extend automated UI coverage beyond the current fallback, provider, localisation and safety regression suite.
 8. Only consider accounts, cloud sync or long-term history after the competition prototype is stable.
 
 ## Competition Positioning
