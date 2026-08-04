@@ -8,14 +8,15 @@ export const colors = {
   mint: '#DFF7EC',
   mintStrong: '#4C9B79',
   peach: '#FFE9DE',
-  peachStrong: '#B76844',
+  peachStrong: '#91482C',
   yellow: '#FFF3C4',
   ink: '#24213A',
   inkMuted: '#6F6A83',
   border: '#DDD8EF',
-  danger: '#B94052',
+  borderStrong: '#8F86AE',
+  danger: '#A82F42',
   dangerSoft: '#FFE3E7',
-  success: '#347E61',
+  success: '#2B6E54',
   shadow: '#1E173D'
 } as const;
 

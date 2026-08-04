@@ -1,11 +1,13 @@
 import { PROVIDERS } from '../config/providers';
 import type { AISettings, RewriteInput, RewriteResult } from '../types';
 import { generateFallbackMessage, safetyMessage } from '../utils/fallback';
+import { isAllowedProviderBaseUrl } from '../utils/providerUrl';
 import { containsUrgentRisk } from './safety';
 
 const languageName = {
   en: 'English',
   'zh-Hant': 'Traditional Chinese',
+  'zh-Hans': 'Simplified Chinese',
   yue: 'natural written Cantonese using Traditional Chinese characters'
 } as const;
 
@@ -29,6 +31,9 @@ const toneName = {
   direct: 'clear and direct without hostility',
   formal: 'respectful and formal'
 } as const;
+
+const providerTimeoutMs = 8000;
+const maxProviderOutputLength = 1500;
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, '');
@@ -93,11 +98,12 @@ async function requestChatCompletion(
 ): Promise<string> {
   const baseUrl = normalizeBaseUrl(settings.baseUrl);
   if (!baseUrl) throw new Error('Base URL is empty.');
+  if (!isAllowedProviderBaseUrl(baseUrl)) throw new Error('Provider Base URL is not allowed.');
   if (!settings.model.trim()) throw new Error('Model name is empty.');
   if (!settings.apiKey.trim()) throw new Error('API key is empty.');
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), providerTimeoutMs);
 
   try {
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -163,10 +169,11 @@ export async function rewriteMessage(
   }
 
   const providerLabel = PROVIDERS[settings.provider].label;
-  const fallback = (): RewriteResult => ({
+  const fallback = (providerId?: AISettings['provider']): RewriteResult => ({
     text: generateFallbackMessage(input),
     source: 'fallback',
     providerLabel: 'Offline fallback',
+    ...(providerId ? { providerId } : {}),
     explanation: [
       'Uses an “I feel” structure instead of blame.',
       'Keeps the request clear and practical.',
@@ -178,10 +185,23 @@ export async function rewriteMessage(
 
   try {
     const text = await requestChatCompletion(settings, input);
+    if (containsUrgentRisk(text) || text.length > maxProviderOutputLength) {
+      const safeFallback = fallback(settings.provider);
+      return {
+        ...safeFallback,
+        providerLabel: 'Safety fallback',
+        explanation: [
+          'The provider response did not pass the prototype output guard.',
+          'Melo used the deterministic fallback instead.',
+          'The message still ends with a practical next step.'
+        ]
+      };
+    }
     return {
       text,
       source: 'ai',
       providerLabel,
+      providerId: settings.provider,
       explanation: [
         'Keeps the original intent while reducing hostile language.',
         'Adapts the wording to the selected recipient and tone.',
@@ -190,6 +210,6 @@ export async function rewriteMessage(
     };
   } catch (error) {
     console.warn('AI rewrite failed; using local fallback.', error);
-    return fallback();
+    return fallback(settings.provider);
   }
 }

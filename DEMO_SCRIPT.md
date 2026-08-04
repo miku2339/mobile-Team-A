@@ -14,16 +14,17 @@
 2. Choose `Overwhelmed`, `Teammate`, `Gentle`, `English`.
 3. Show Melo breathing with the user.
 4. Skip the timer for demo speed.
-5. Show the rewritten message and explain the three changes:
+5. Show the Before/After comparison and explain the three changes:
    - less blame;
    - a clear feeling statement;
    - one practical next step.
 6. Press Copy or Share.
-7. Show the Calm Star and Melo accessory progression.
+7. Show the one Calm Star reward, then explain that accessories unlock at 3, 7 and 15 stars.
+8. Open Settings and switch the full interface between English, Traditional Chinese and Simplified Chinese.
 
 ## BYOK / Technical point
 
-> The prototype supports OpenAI, Alibaba Cloud Model Studio, BigModel and any OpenAI-compatible endpoint. Users provide their own key, while an offline fallback keeps the demo functional without network access.
+> The prototype is BYOK only: it does not provide a model, key, credits or default Model ID. Users can connect OpenAI, Google AI Studio, Alibaba Cloud, DeepSeek, Kimi, MiniMax, BigModel or a compatible endpoint. The deterministic offline fallback keeps the demo functional without network access.
 
 ## Ethical design point
 

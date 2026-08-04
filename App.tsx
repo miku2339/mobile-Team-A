@@ -1,32 +1,36 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
+  useWindowDimensions
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { AISettingsModal } from './src/components/AISettingsModal';
 import { ChoiceChip } from './src/components/ChoiceChip';
 import { MeloPet } from './src/components/MeloPet';
 import { PrimaryButton } from './src/components/PrimaryButton';
 import { PROVIDERS } from './src/config/providers';
+import { getTranslations, uiLanguageToOutputLanguage } from './src/i18n';
 import { rewriteMessage } from './src/services/ai';
 import {
   clearAISettings,
   loadAISettings,
   loadCalmStars,
+  loadUILanguage,
   saveAISettings,
-  saveCalmStars
+  saveCalmStars,
+  saveUILanguage
 } from './src/services/storage';
 import { colors, radius } from './src/theme';
 import type {
@@ -36,37 +40,30 @@ import type {
   PetMood,
   RecipientId,
   RewriteResult,
-  ToneId
+  ToneId,
+  UILanguage
 } from './src/types';
 
 type Step = 'home' | 'draft' | 'checkin' | 'pause' | 'result';
 
-const emotionOptions: Array<{ id: EmotionId; label: string; emoji: string }> = [
-  { id: 'angry', label: 'Angry', emoji: '😠' },
-  { id: 'overwhelmed', label: 'Overwhelmed', emoji: '😵‍💫' },
-  { id: 'hurt', label: 'Hurt', emoji: '💔' },
-  { id: 'anxious', label: 'Anxious', emoji: '😟' },
-  { id: 'disappointed', label: 'Disappointed', emoji: '😞' }
+const emotionOptions: Array<{ id: EmotionId; emoji: string }> = [
+  { id: 'angry', emoji: '😠' },
+  { id: 'overwhelmed', emoji: '😵‍💫' },
+  { id: 'hurt', emoji: '💔' },
+  { id: 'anxious', emoji: '😟' },
+  { id: 'disappointed', emoji: '😞' }
 ];
 
-const recipientOptions: Array<{ id: RecipientId; label: string; emoji: string }> = [
-  { id: 'friend', label: 'Friend', emoji: '🫶' },
-  { id: 'teammate', label: 'Teammate', emoji: '👥' },
-  { id: 'teacher', label: 'Teacher', emoji: '🧑‍🏫' },
-  { id: 'family', label: 'Family', emoji: '🏠' }
+const recipientOptions: Array<{ id: RecipientId; emoji: string }> = [
+  { id: 'friend', emoji: '🫶' },
+  { id: 'teammate', emoji: '👥' },
+  { id: 'teacher', emoji: '🧑‍🏫' },
+  { id: 'family', emoji: '🏠' }
 ];
 
-const toneOptions: Array<{ id: ToneId; label: string }> = [
-  { id: 'gentle', label: 'Gentle' },
-  { id: 'direct', label: 'Direct' },
-  { id: 'formal', label: 'Formal' }
-];
+const toneOptions: ToneId[] = ['gentle', 'direct', 'formal'];
 
-const languageOptions: Array<{ id: AppLanguage; label: string }> = [
-  { id: 'en', label: 'English' },
-  { id: 'zh-Hant', label: '繁體中文' },
-  { id: 'yue', label: '廣東話' }
-];
+const languageOptions: AppLanguage[] = ['en', 'zh-Hant', 'zh-Hans', 'yue'];
 
 const initialSettings: AISettings = {
   provider: 'openai',
@@ -74,8 +71,6 @@ const initialSettings: AISettings = {
   baseUrl: PROVIDERS.openai.baseUrl,
   model: PROVIDERS.openai.model
 };
-
-const sampleDraft = 'You never do any work. I am done with this group project.';
 
 function petMoodForStep(step: Step): PetMood {
   switch (step) {
@@ -92,24 +87,9 @@ function petMoodForStep(step: Step): PetMood {
   }
 }
 
-function petLineForStep(step: Step): string {
-  switch (step) {
-    case 'draft':
-      return 'Tell me what you almost sent. I will not judge.';
-    case 'checkin':
-      return 'Naming the feeling helps create a little space.';
-    case 'pause':
-      return 'Breathe with me. We can answer after the feeling slows down.';
-    case 'result':
-      return 'You made room for a kinder and clearer next step.';
-    default:
-      return 'I’m Melo. I help you pause before a difficult message.';
-  }
-}
-
-function ProgressDots({ current }: { current: 1 | 2 | 3 }) {
+function ProgressDots({ current, label }: { current: 1 | 2 | 3; label: string }) {
   return (
-    <View accessibilityLabel={`Step ${current} of 3`} style={styles.progressRow}>
+    <View accessibilityLabel={label} style={styles.progressRow}>
       {[1, 2, 3].map((item) => (
         <View key={item} style={[styles.progressDot, item <= current && styles.progressDotActive]} />
       ))}
@@ -119,16 +99,20 @@ function ProgressDots({ current }: { current: 1 | 2 | 3 }) {
 
 function AppHeader({
   stars,
-  onSettings
+  onSettings,
+  tagline,
+  settingsAccessibility
 }: {
   stars: number;
   onSettings: () => void;
+  tagline: string;
+  settingsAccessibility: string;
 }) {
   return (
     <View style={styles.header}>
       <View>
         <Text style={styles.brand}>Melo</Text>
-        <Text style={styles.brandSub}>Pause. Breathe. Say it better.</Text>
+        <Text numberOfLines={1} style={styles.brandSub}>{tagline}</Text>
       </View>
       <View style={styles.headerActions}>
         <View style={styles.starBadge}>
@@ -136,7 +120,7 @@ function AppHeader({
           <Text style={styles.starText}>{stars}</Text>
         </View>
         <Pressable
-          accessibilityLabel="Open AI settings"
+          accessibilityLabel={settingsAccessibility}
           accessibilityRole="button"
           onPress={onSettings}
           style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]}
@@ -149,9 +133,13 @@ function AppHeader({
 }
 
 export default function App() {
+  const { width } = useWindowDimensions();
+  const compactLayout = width < 380;
+  const scrollRef = useRef<ScrollView>(null);
   const [step, setStep] = useState<Step>('home');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<AISettings>(initialSettings);
+  const [uiLanguage, setUILanguage] = useState<UILanguage>('en');
   const [stars, setStars] = useState(0);
   const [draft, setDraft] = useState('');
   const [emotion, setEmotion] = useState<EmotionId>('overwhelmed');
@@ -162,11 +150,17 @@ export default function App() {
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<RewriteResult | null>(null);
   const [rewardedThisRun, setRewardedThisRun] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copy = useMemo(() => getTranslations(uiLanguage), [uiLanguage]);
 
   useEffect(() => {
-    void Promise.all([loadAISettings(), loadCalmStars()]).then(([savedSettings, savedStars]) => {
+    void Promise.all([loadAISettings(), loadCalmStars(), loadUILanguage()]).then(([savedSettings, savedStars, savedLanguage]) => {
       if (savedSettings) setSettings(savedSettings);
       setStars(savedStars);
+      if (savedLanguage) {
+        setUILanguage(savedLanguage);
+        setLanguage(uiLanguageToOutputLanguage(savedLanguage));
+      }
     });
   }, []);
 
@@ -184,33 +178,68 @@ export default function App() {
     }
   }, [generating, pauseSeconds, result, step]);
 
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [step]);
+
   const providerStatus = useMemo(() => {
-    if (!settings.apiKey.trim()) return 'Offline fallback ready';
-    return `${PROVIDERS[settings.provider].label} · ${settings.model}`;
-  }, [settings]);
+    if (!settings.apiKey.trim()) return copy.home.offlineReady;
+    return copy.home.providerReady(copy.providerNames[settings.provider], settings.model);
+  }, [copy, settings]);
 
   const breathingPhase = useMemo(() => {
     const elapsed = 12 - pauseSeconds;
-    if (elapsed < 4) return 'Breathe in';
-    if (elapsed < 6) return 'Hold';
-    return 'Breathe out';
-  }, [pauseSeconds]);
+    if (elapsed < 4) return copy.pause.breatheIn;
+    if (elapsed < 6) return copy.pause.hold;
+    return copy.pause.breatheOut;
+  }, [copy, pauseSeconds]);
+
+  const petLine = copy.pet[step];
+  const providerName = copy.providerNames[settings.provider];
+  const resultProviderName = result?.providerId
+    ? copy.providerNames[result.providerId]
+    : null;
+  const sourceLabel = result
+    ? result.source === 'ai'
+      ? resultProviderName ?? result.providerLabel
+      : result.source === 'safety'
+        ? copy.result.safetyPauseLabel
+        : result.providerLabel === 'Safety fallback'
+          ? copy.result.safetyFallbackLabel
+          : copy.result.offlineLabel
+    : '';
+  const explanation = result
+    ? result.source === 'ai'
+      ? copy.result.aiReasons
+      : result.source === 'safety'
+        ? copy.result.safetyReasons
+        : result.providerLabel === 'Safety fallback'
+          ? copy.result.safetyFallbackReasons
+          : copy.result.fallbackReasons
+    : [];
+  const footerProviderName =
+    step === 'result' && resultProviderName
+      ? resultProviderName
+      : providerName;
+  const footerUsesProvider = Boolean(result?.providerId) || settings.apiKey.trim().length > 0;
 
   const resetRun = () => {
     setDraft('');
     setEmotion('overwhelmed');
     setRecipient('teammate');
     setTone('gentle');
-    setLanguage('en');
+    setLanguage(uiLanguageToOutputLanguage(uiLanguage));
     setPauseSeconds(12);
     setResult(null);
     setRewardedThisRun(false);
+    setCopied(false);
     setStep('home');
   };
 
   const beginPause = () => {
     setPauseSeconds(12);
     setResult(null);
+    setCopied(false);
     setStep('pause');
   };
 
@@ -235,7 +264,7 @@ export default function App() {
         await saveCalmStars(updated);
       }
     } catch {
-      Alert.alert('Something went wrong', 'Please try again. Melo can also work without an API key.');
+      Alert.alert(copy.common.errorTitle, copy.common.errorBody);
     } finally {
       setGenerating(false);
     }
@@ -243,8 +272,13 @@ export default function App() {
 
   const copyResult = async () => {
     if (!result) return;
-    await Clipboard.setStringAsync(result.text);
-    Alert.alert('Copied', 'The message is ready to paste.');
+    try {
+      await Clipboard.setStringAsync(result.text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      Alert.alert(copy.common.errorTitle, copy.common.errorBody);
+    }
   };
 
   const shareResult = async () => {
@@ -262,36 +296,55 @@ export default function App() {
     setSettings((current) => ({ ...current, apiKey: '' }));
   };
 
+  const changeUILanguage = async (next: UILanguage) => {
+    setUILanguage(next);
+    if (step === 'home' && !draft.trim()) {
+      setLanguage(uiLanguageToOutputLanguage(next));
+    }
+    await saveUILanguage(next);
+  };
+
   const mood = petMoodForStep(step);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <AppHeader stars={stars} onSettings={() => setSettingsOpen(true)} />
+    <SafeAreaProvider>
+      <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
+        <StatusBar style="dark" />
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+        <AppHeader
+          stars={stars}
+          tagline={copy.brandTagline}
+          settingsAccessibility={copy.settingsAccessibility}
+          onSettings={() => setSettingsOpen(true)}
+        />
 
         <ScrollView
+          ref={scrollRef}
           style={styles.flex}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.petSection}>
-            <MeloPet mood={mood} size={step === 'home' ? 150 : 112} stars={stars} />
+            <MeloPet mood={mood} size={step === 'home' ? 136 : 104} stars={stars} />
             <View style={styles.speechBubble}>
-              <Text style={styles.speechText}>{petLineForStep(step)}</Text>
+              <Text style={styles.speechText}>{petLine}</Text>
             </View>
           </View>
 
           {step === 'home' ? (
             <View style={styles.panel}>
-              <Text style={styles.heroTitle}>Before you send it, give yourself one pause.</Text>
-              <Text style={styles.bodyText}>
-                Melo helps students turn an emotional draft into a calmer, clearer message—without
-                pretending to be a therapist.
-              </Text>
+              <Text style={styles.heroTitle}>{copy.home.heroTitle}</Text>
+              <Text style={styles.bodyText}>{copy.home.body}</Text>
+
+              <PrimaryButton label={copy.home.start} onPress={() => setStep('draft')} />
+              <PrimaryButton
+                label={copy.home.configure}
+                variant="ghost"
+                onPress={() => setSettingsOpen(true)}
+              />
 
               <View style={styles.statusCard}>
                 <View style={[styles.statusDot, settings.apiKey ? styles.statusDotOnline : null]} />
@@ -299,42 +352,30 @@ export default function App() {
                   <Text style={styles.statusTitle}>{providerStatus}</Text>
                   <Text style={styles.statusSub}>
                     {settings.apiKey
-                      ? 'Your selected provider will rewrite the message.'
-                      : 'Add your own API key, or demonstrate the built-in safe template.'}
+                      ? copy.home.aiStatus
+                      : copy.home.offlineStatus}
                   </Text>
                 </View>
               </View>
 
-              <PrimaryButton label="Start a calm rewrite" onPress={() => setStep('draft')} />
-              <PrimaryButton
-                label="Configure AI provider"
-                variant="secondary"
-                onPress={() => setSettingsOpen(true)}
-              />
-
               <View style={styles.noGuiltCard}>
-                <Text style={styles.noGuiltTitle}>✦ Calm Stars, not streak pressure</Text>
-                <Text style={styles.noGuiltText}>
-                  The virtual pet celebrates completed pauses. It never gets sick, hungry or sad when
-                  the user takes a break from the app.
-                </Text>
+                <Text style={styles.noGuiltTitle}>{copy.home.noGuiltTitle}</Text>
+                <Text style={styles.noGuiltText}>{copy.home.noGuiltBody}</Text>
               </View>
             </View>
           ) : null}
 
           {step === 'draft' ? (
             <View style={styles.panel}>
-              <ProgressDots current={1} />
-              <Text style={styles.stepEyebrow}>STEP 1</Text>
-              <Text style={styles.stepTitle}>What were you about to send?</Text>
-              <Text style={styles.bodyText}>
-                Paste the original draft. Melo will preserve the intent, not the hurtful wording.
-              </Text>
+              <ProgressDots current={1} label={copy.progress(1)} />
+              <Text style={styles.stepEyebrow}>{copy.draft.eyebrow}</Text>
+              <Text style={styles.stepTitle}>{copy.draft.title}</Text>
+              <Text style={styles.bodyText}>{copy.draft.body}</Text>
               <TextInput
-                accessibilityLabel="Original message draft"
+                accessibilityLabel={copy.draft.accessibility}
                 multiline
                 maxLength={1200}
-                placeholder="Type or paste a difficult message…"
+                placeholder={copy.draft.placeholder}
                 placeholderTextColor={colors.inkMuted}
                 value={draft}
                 onChangeText={setDraft}
@@ -342,15 +383,19 @@ export default function App() {
                 textAlignVertical="top"
               />
               <View style={styles.inputMeta}>
-                <Pressable onPress={() => setDraft(sampleDraft)}>
-                  <Text style={styles.textAction}>Use demo example</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setDraft(copy.draft.sample)}
+                  style={({ pressed }) => [styles.demoAction, pressed && styles.pressed]}
+                >
+                  <Text style={styles.textAction}>{copy.draft.demo}</Text>
                 </Pressable>
                 <Text style={styles.charCount}>{draft.length}/1200</Text>
               </View>
-              <View style={styles.inlineButtons}>
-                <PrimaryButton label="Back" variant="ghost" onPress={() => setStep('home')} style={styles.flexButton} />
+              <View style={[styles.inlineButtons, compactLayout && styles.compactButtonStack]}>
+                <PrimaryButton label={copy.common.back} variant="ghost" onPress={() => setStep('home')} style={styles.flexButton} />
                 <PrimaryButton
-                  label="Continue"
+                  label={copy.draft.continue}
                   onPress={() => setStep('checkin')}
                   disabled={draft.trim().length < 5}
                   style={styles.flexButton}
@@ -361,78 +406,87 @@ export default function App() {
 
           {step === 'checkin' ? (
             <View style={styles.panel}>
-              <ProgressDots current={2} />
-              <Text style={styles.stepEyebrow}>STEP 2</Text>
-              <Text style={styles.stepTitle}>Give the message some context.</Text>
+              <ProgressDots current={2} label={copy.progress(2)} />
+              <Text style={styles.stepEyebrow}>{copy.checkin.eyebrow}</Text>
+              <Text style={styles.stepTitle}>{copy.checkin.title}</Text>
 
-              <Text style={styles.groupLabel}>How are you feeling?</Text>
+              <Text style={styles.groupLabel}>{copy.checkin.emotion}</Text>
               <View style={styles.chipWrap}>
                 {emotionOptions.map((option) => (
                   <ChoiceChip
                     key={option.id}
                     emoji={option.emoji}
-                    label={option.label}
+                    label={copy.emotions[option.id]}
                     selected={emotion === option.id}
                     onPress={() => setEmotion(option.id)}
                   />
                 ))}
               </View>
 
-              <Text style={styles.groupLabel}>Who will receive it?</Text>
+              <Text style={styles.groupLabel}>{copy.checkin.recipient}</Text>
               <View style={styles.chipWrap}>
                 {recipientOptions.map((option) => (
                   <ChoiceChip
                     key={option.id}
                     emoji={option.emoji}
-                    label={option.label}
+                    label={copy.recipients[option.id]}
                     selected={recipient === option.id}
                     onPress={() => setRecipient(option.id)}
                   />
                 ))}
               </View>
 
-              <Text style={styles.groupLabel}>Preferred tone</Text>
+              <Text style={styles.groupLabel}>{copy.checkin.tone}</Text>
               <View style={styles.chipWrap}>
                 {toneOptions.map((option) => (
                   <ChoiceChip
-                    key={option.id}
-                    label={option.label}
-                    selected={tone === option.id}
-                    onPress={() => setTone(option.id)}
+                    key={option}
+                    label={copy.tones[option]}
+                    selected={tone === option}
+                    onPress={() => setTone(option)}
                   />
                 ))}
               </View>
 
-              <Text style={styles.groupLabel}>Output language</Text>
+              <Text style={styles.groupLabel}>{copy.checkin.outputLanguage}</Text>
               <View style={styles.chipWrap}>
                 {languageOptions.map((option) => (
                   <ChoiceChip
-                    key={option.id}
-                    label={option.label}
-                    selected={language === option.id}
-                    onPress={() => setLanguage(option.id)}
+                    key={option}
+                    label={copy.outputLanguages[option]}
+                    selected={language === option}
+                    onPress={() => setLanguage(option)}
                   />
                 ))}
               </View>
 
-              <View style={styles.inlineButtons}>
-                <PrimaryButton label="Back" variant="ghost" onPress={() => setStep('draft')} style={styles.flexButton} />
-                <PrimaryButton label="Pause with Melo" onPress={beginPause} style={styles.flexButton} />
+              <View style={styles.dataNotice}>
+                <Text style={styles.dataNoticeTitle}>
+                  {settings.apiKey ? copy.checkin.aiMode(providerName) : copy.checkin.offlineMode}
+                </Text>
+                <Text style={styles.dataNoticeText}>
+                  {settings.apiKey
+                    ? copy.checkin.aiNotice(providerName)
+                    : copy.checkin.offlineNotice}
+                </Text>
+              </View>
+
+              <View style={[styles.inlineButtons, compactLayout && styles.compactButtonStack]}>
+                <PrimaryButton label={copy.common.back} variant="ghost" onPress={() => setStep('draft')} style={styles.flexButton} />
+                <PrimaryButton label={copy.checkin.pause} onPress={beginPause} style={styles.flexButton} />
               </View>
             </View>
           ) : null}
 
           {step === 'pause' ? (
             <View style={[styles.panel, styles.pausePanel]}>
-              <ProgressDots current={3} />
-              <Text style={styles.stepEyebrow}>STEP 3</Text>
-              <Text style={styles.breathingPhase}>{generating ? 'Finding better words…' : breathingPhase}</Text>
+              <ProgressDots current={3} label={copy.progress(3)} />
+              <Text style={styles.stepEyebrow}>{copy.pause.eyebrow}</Text>
+              <Text style={styles.breathingPhase}>{generating ? copy.pause.generating : breathingPhase}</Text>
               <Text style={styles.countdown}>{generating ? 'AI' : pauseSeconds}</Text>
-              <Text style={styles.bodyTextCentered}>
-                One short reset can interrupt an impulsive send. This demo uses a 12-second cycle.
-              </Text>
+              <Text style={styles.bodyTextCentered}>{copy.pause.body}</Text>
               <PrimaryButton
-                label={generating ? 'Generating…' : 'Skip breathing for demo'}
+                label={generating ? copy.pause.generating : copy.pause.skip}
                 variant="secondary"
                 loading={generating}
                 onPress={() => {
@@ -441,7 +495,7 @@ export default function App() {
                 }}
               />
               <PrimaryButton
-                label="Back"
+                label={copy.common.back}
                 variant="ghost"
                 disabled={generating}
                 onPress={() => setStep('checkin')}
@@ -452,9 +506,9 @@ export default function App() {
           {step === 'result' && result ? (
             <View style={styles.panel}>
               <View style={styles.resultHeader}>
-                <View>
-                  <Text style={styles.stepEyebrow}>READY TO REVIEW</Text>
-                  <Text style={styles.stepTitle}>A calmer version</Text>
+                <View style={styles.resultTitleCopy}>
+                  <Text style={styles.stepEyebrow}>{copy.result.eyebrow}</Text>
+                  <Text style={styles.stepTitle}>{copy.result.title}</Text>
                 </View>
                 <View
                   style={[
@@ -468,30 +522,51 @@ export default function App() {
                       result.source === 'safety' && styles.sourceTextDanger
                     ]}
                   >
-                    {result.providerLabel}
+                    {sourceLabel}
                   </Text>
                 </View>
               </View>
 
               {result.source === 'safety' ? (
                 <View style={styles.safetyCard}>
-                  <Text style={styles.safetyTitle}>Please get real-world support now</Text>
-                  <Text style={styles.safetyBody}>
-                    Contact someone you trust or local emergency services. Melo is not a crisis service,
-                    diagnosis tool or replacement for professional support.
-                  </Text>
+                  <Text style={styles.safetyTitle}>{copy.result.safetyTitle}</Text>
+                  <Text style={styles.safetyBody}>{copy.result.safetyBody}</Text>
                 </View>
               ) : null}
 
+              <Text style={styles.groupLabel}>{copy.result.before}</Text>
+              <View style={styles.beforeCard}>
+                <Text selectable style={styles.beforeText}>
+                  {draft}
+                </Text>
+              </View>
+
+              <Text style={styles.groupLabel}>{copy.result.after}</Text>
               <View style={styles.resultCard}>
                 <Text selectable style={styles.resultText}>
                   {result.text}
                 </Text>
               </View>
 
-              <Text style={styles.groupLabel}>Why this is healthier</Text>
+              <View style={[styles.inlineButtons, compactLayout && styles.compactButtonStack]}>
+                <PrimaryButton
+                  label={copied ? `✓ ${copy.result.copiedTitle}` : copy.result.copy}
+                  onPress={copyResult}
+                  style={styles.flexButton}
+                />
+                <PrimaryButton label={copy.result.share} variant="secondary" onPress={shareResult} style={styles.flexButton} />
+              </View>
+
+              {result.source !== 'safety' ? (
+                <View style={styles.rewardCard}>
+                  <Text style={styles.rewardTitle}>{copy.result.rewardTitle}</Text>
+                  <Text style={styles.rewardText}>{copy.result.rewardBody(stars)}</Text>
+                </View>
+              ) : null}
+
+              <Text style={styles.groupLabel}>{copy.result.why}</Text>
               <View style={styles.reasonList}>
-                {result.explanation.map((item) => (
+                {explanation.map((item) => (
                   <View key={item} style={styles.reasonRow}>
                     <Text style={styles.reasonBullet}>✓</Text>
                     <Text style={styles.reasonText}>{item}</Text>
@@ -499,36 +574,37 @@ export default function App() {
                 ))}
               </View>
 
-              <View style={styles.inlineButtons}>
-                <PrimaryButton label="Copy" onPress={copyResult} style={styles.flexButton} />
-                <PrimaryButton label="Share" variant="secondary" onPress={shareResult} style={styles.flexButton} />
-              </View>
               <PrimaryButton
-                label="Try another tone"
+                label={copy.result.retry}
                 variant="ghost"
                 onPress={() => {
                   setResult(null);
                   setStep('checkin');
                 }}
               />
-              <PrimaryButton label="Start over" variant="ghost" onPress={resetRun} />
+              <PrimaryButton label={copy.result.restart} variant="ghost" onPress={resetRun} />
             </View>
           ) : null}
 
           <Text style={styles.footerNote}>
-            Prototype only · No diagnosis · Drafts are not intentionally stored by the app
+            {footerUsesProvider
+              ? copy.footer.ai(footerProviderName)
+              : copy.footer.offline}
           </Text>
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
 
-      <AISettingsModal
-        visible={settingsOpen}
-        value={settings}
-        onClose={() => setSettingsOpen(false)}
-        onSave={saveSettings}
-        onClear={clearSettings}
-      />
-    </SafeAreaView>
+        <AISettingsModal
+          visible={settingsOpen}
+          value={settings}
+          language={uiLanguage}
+          onClose={() => setSettingsOpen(false)}
+          onSave={saveSettings}
+          onClear={clearSettings}
+          onLanguageChange={changeUILanguage}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -536,6 +612,9 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   header: {
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 8,
@@ -560,9 +639,9 @@ const styles = StyleSheet.create({
   starEmoji: { color: '#9B7410', fontSize: 16 },
   starText: { color: colors.ink, fontWeight: '800', fontSize: 15 },
   settingsButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -571,8 +650,8 @@ const styles = StyleSheet.create({
   },
   settingsIcon: { color: colors.ink, fontSize: 21, fontWeight: '700' },
   pressed: { opacity: 0.7 },
-  scrollContent: { paddingHorizontal: 18, paddingBottom: 36 },
-  petSection: { alignItems: 'center', marginTop: 2, marginBottom: 12 },
+  scrollContent: { paddingHorizontal: 18, paddingBottom: 36, alignItems: 'center' },
+  petSection: { width: '100%', maxWidth: 600, alignItems: 'center', marginTop: 2, marginBottom: 12 },
   speechBubble: {
     maxWidth: 330,
     backgroundColor: colors.surface,
@@ -589,6 +668,8 @@ const styles = StyleSheet.create({
   },
   speechText: { color: colors.ink, textAlign: 'center', fontSize: 14, lineHeight: 20 },
   panel: {
+    width: '100%',
+    maxWidth: 600,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: 20,
@@ -601,7 +682,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 3
   },
-  heroTitle: { color: colors.ink, fontSize: 29, lineHeight: 35, fontWeight: '900', letterSpacing: -0.7 },
+  heroTitle: { color: colors.ink, fontSize: 28, lineHeight: 35, fontWeight: '800' },
   bodyText: { color: colors.inkMuted, fontSize: 15, lineHeight: 22 },
   bodyTextCentered: { color: colors.inkMuted, fontSize: 15, lineHeight: 22, textAlign: 'center' },
   statusCard: {
@@ -628,7 +709,7 @@ const styles = StyleSheet.create({
   draftInput: {
     minHeight: 170,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     borderRadius: radius.md,
     backgroundColor: colors.background,
     color: colors.ink,
@@ -637,16 +718,22 @@ const styles = StyleSheet.create({
     padding: 15
   },
   inputMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  demoAction: { minHeight: 44, justifyContent: 'center', paddingRight: 12 },
   textAction: { color: colors.primaryDark, fontWeight: '800', fontSize: 13 },
   charCount: { color: colors.inkMuted, fontSize: 12 },
   inlineButtons: { flexDirection: 'row', gap: 10 },
+  compactButtonStack: { flexDirection: 'column' },
   flexButton: { flex: 1 },
   groupLabel: { color: colors.ink, fontSize: 15, fontWeight: '900', marginTop: 3 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  dataNotice: { backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: 14 },
+  dataNoticeTitle: { color: colors.ink, fontSize: 13, fontWeight: '900' },
+  dataNoticeText: { color: colors.inkMuted, fontSize: 12, lineHeight: 18, marginTop: 4 },
   pausePanel: { alignItems: 'stretch' },
   breathingPhase: { color: colors.primaryDark, fontWeight: '900', fontSize: 25, textAlign: 'center', marginTop: 4 },
   countdown: { color: colors.ink, fontWeight: '900', fontSize: 54, textAlign: 'center', lineHeight: 62 },
-  resultHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  resultHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  resultTitleCopy: { flex: 1, minWidth: 210 },
   sourceBadge: { backgroundColor: colors.mint, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 7 },
   sourceBadgeDanger: { backgroundColor: colors.dangerSoft },
   sourceText: { color: colors.success, fontWeight: '800', fontSize: 11 },
@@ -654,11 +741,16 @@ const styles = StyleSheet.create({
   safetyCard: { backgroundColor: colors.dangerSoft, borderRadius: radius.md, padding: 15 },
   safetyTitle: { color: colors.danger, fontWeight: '900', fontSize: 15 },
   safetyBody: { color: colors.ink, fontSize: 13, lineHeight: 19, marginTop: 4 },
+  beforeCard: { backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: 15 },
+  beforeText: { color: colors.inkMuted, fontSize: 15, lineHeight: 22 },
   resultCard: { backgroundColor: colors.primarySoft, borderRadius: radius.md, padding: 17 },
   resultText: { color: colors.ink, fontSize: 17, lineHeight: 26, fontWeight: '600' },
+  rewardCard: { backgroundColor: colors.yellow, borderRadius: radius.md, padding: 14 },
+  rewardTitle: { color: colors.ink, fontSize: 14, fontWeight: '900' },
+  rewardText: { color: colors.inkMuted, fontSize: 12, lineHeight: 18, marginTop: 3 },
   reasonList: { gap: 9 },
   reasonRow: { flexDirection: 'row', gap: 9, alignItems: 'flex-start' },
   reasonBullet: { color: colors.success, fontWeight: '900', fontSize: 16 },
   reasonText: { flex: 1, color: colors.inkMuted, fontSize: 13, lineHeight: 19 },
-  footerNote: { color: colors.inkMuted, fontSize: 10, lineHeight: 15, textAlign: 'center', marginTop: 16, paddingHorizontal: 12 }
+  footerNote: { width: '100%', maxWidth: 600, color: colors.inkMuted, fontSize: 10, lineHeight: 15, textAlign: 'center', marginTop: 16, paddingHorizontal: 12 }
 });
