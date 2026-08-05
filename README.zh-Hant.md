@@ -10,6 +10,7 @@ Melo 是一隻不會以飢餓、死亡或連續簽到向用戶施壓的虛擬寵
 
 - 四段主要流程：原訊息 → 情緒與對象 → 呼吸 pause → 改寫結果
 - 虛擬寵物 Melo，會按流程改變表情與呼吸動畫
+- App 圖標、Android adaptive icon 與 Web favicon 均使用 App 內同一張平靜 Melo 臉，保持品牌一致
 - 類似 ChatGPT App 訊息形式的 Melo Chat，使用 Melo 自己的陪伴人格與真實已設定 Provider 回覆
 - 每則成功的 AI 回覆都保存當時實際使用的 Provider 與模型；Chat 標題列顯示目前服務，每則回覆下只以安靜小字顯示準確 Model ID，之後更換設定也不會誤改舊歸屬
 - Chat 最近 24 則訊息只保存在目前裝置／瀏覽器；每輪最多只把最近 8 則對話連同系統指示送到 Provider
@@ -88,6 +89,7 @@ npx expo-doctor
 - deterministic regression suite 通過，並涵蓋 Provider 真實歸因、Chat 上下文上限、本機保存、安全邊界及圖片能力開關
 - Expo Doctor 的 SDK 54 檢查 18／18 通過
 - Web、iOS、Android production export 全部成功
+- 新版 Melo 臉圖標設定已包含在三平台 export；安裝 standalone build 後的主畫面 launcher 顯示仍屬最後真機發佈驗收
 - 以 390 × 844 手機尺寸完整操作離線黃金流程，包括三種介面語言、Provider 選擇、阿里雲 Plan／地區切換、Before／After、Copy 回饋與 Calm Stars
 - 渲染端到端 Provider 測試成功接收一個刻意延遲 9 秒的 OpenAI-compatible 回覆，證明不再被舊版 8 秒 timeout 截斷；整次流程只發出 1 次 POST
 - 渲染 HTTP 500 流程會顯示 `Offline fallback`、`AI rewrite did not complete` 及 `HTTP 500`，不會把本機確定性模板冒充為模型結果
