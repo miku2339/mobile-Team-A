@@ -40,6 +40,8 @@ export interface UiCopy {
     configure: string;
     noGuiltTitle: string;
     noGuiltBody: string;
+    petTapAccessibility: string;
+    petTapLines: [string, string, string];
   };
   chat: {
     eyebrow: string;
@@ -154,13 +156,6 @@ export interface UiCopy {
     safetyReasons: string[];
     safetyFallbackReasons: string[];
   };
-  footer: {
-    ai: (provider: string) => string;
-    configured: (provider: string) => string;
-    fallback: (provider: string) => string;
-    notSent: (provider: string) => string;
-    offline: string;
-  };
   settings: {
     pageTitle: string;
     languageEyebrow: string;
@@ -185,7 +180,8 @@ export interface UiCopy {
     detailsHide: string;
     planServerTitle: string;
     planServerSummary: (plan: string, region: string) => string;
-    privacyNote: string;
+    privacyNoteNative: string;
+    privacyNoteWeb: string;
     keyPlanMismatchTitle: string;
     keyPlanMismatchBody: string;
     apiKey: string;
@@ -275,7 +271,13 @@ const translations: Record<UILanguage, UiCopy> = {
       chat: 'Talk to Melo',
       configure: 'Settings & model service',
       noGuiltTitle: 'Your progress waits for you',
-      noGuiltBody: 'There are no streaks to protect. Your Calm Stars stay, and Melo will be here when you return.'
+      noGuiltBody: 'There are no streaks to protect. Your Calm Stars stay, and Melo will be here when you return.',
+      petTapAccessibility: 'Tap Melo for a little response',
+      petTapLines: [
+        'Hi. I’m right here with you.',
+        'One small pause still counts.',
+        'We can take the next step together.'
+      ]
     },
     chat: {
       eyebrow: 'OPTIONAL · SHORT CHAT',
@@ -307,8 +309,8 @@ const translations: Record<UILanguage, UiCopy> = {
       melo: 'Melo',
       aiMode: (provider) => provider,
       offlineMode: 'Set up a model to chat',
-      aiLabel: (provider, model) =>
-        model ? `${provider} · ${model}` : `${provider} · Model not recorded`,
+      aiLabel: (_provider, model) =>
+        model ? `Model · ${model}` : 'Model not recorded',
       safetyLabel: 'Safety pause',
       unavailableTitle: 'Melo could not add an AI reply',
       noKeyBody: 'Choose your own model service, key and model before starting a chat. Melo does not provide a default model.',
@@ -404,20 +406,13 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyReasons: ['The draft may indicate immediate risk.', 'Melo pauses rewriting and encourages real-world support.', 'This keyword guard is a prototype, not a clinical assessment.'],
       safetyFallbackReasons: ['The provider response did not pass the prototype output guard.', 'Melo used the deterministic fallback instead.', 'The message still ends with a practical next step.']
     },
-    footer: {
-      ai: (provider) => `Prototype only · No diagnosis · This draft is sent to ${provider}`,
-      configured: (provider) => `Prototype only · ${provider} is configured · A draft is sent only when you request a rewrite`,
-      fallback: (provider) => `Attempt to ${provider} did not produce this result · This result is Melo’s local fallback`,
-      notSent: (provider) => `${provider} settings need attention · No provider request was sent · This result is Melo’s local fallback`,
-      offline: 'Prototype only · No diagnosis · Offline mode makes no provider request'
-    },
     settings: {
       pageTitle: 'Settings',
       languageEyebrow: 'GENERAL',
       languageTitle: 'App language',
       languageBody: 'Changes navigation, controls, safety notices and results. Message language remains selectable in each rewrite.',
-      aiEyebrow: 'CONNECTION',
-      title: 'Model connection',
+      aiEyebrow: 'MELO',
+      title: 'Connect your model',
       noticeTitle: 'Use your own account',
       noticeBody: 'Melo does not include model access.',
       provider: 'Service',
@@ -435,7 +430,8 @@ const translations: Record<UILanguage, UiCopy> = {
       detailsHide: 'Hide',
       planServerTitle: 'Plan & server',
       planServerSummary: (plan, region) => `${plan} · ${region}`,
-      privacyNote: 'Melo does not include model access. Native apps encrypt your key on this device; Web preview keeps it only in this tab.',
+      privacyNoteNative: 'Use your own model account. Messages and photos go to the service you choose; your key is encrypted on this device.',
+      privacyNoteWeb: 'Use your own model account. Messages and photos go to the service you choose; your key stays only in this tab.',
       keyPlanMismatchTitle: 'Key and plan do not match',
       keyPlanMismatchBody: 'Pay-as-you-go uses a standard key. Coding Plan and Token Plan require their dedicated sk-sp- key. Choose the matching plan and region.',
       apiKey: 'API key',
@@ -520,7 +516,13 @@ const translations: Record<UILanguage, UiCopy> = {
       chat: '和 Melo 聊聊',
       configure: '設定與模型服務',
       noGuiltTitle: '進度會等你回來',
-      noGuiltBody: '不用維持連續紀錄。Calm Stars 會一直保留，Melo 也會在這裡等你。'
+      noGuiltBody: '不用維持連續紀錄。Calm Stars 會一直保留，Melo 也會在這裡等你。',
+      petTapAccessibility: '點一下 Melo，看看它的回應',
+      petTapLines: [
+        '嗨，我在這裡陪你。',
+        '停一停，也是一個小進步。',
+        '我們可以一起走下一步。'
+      ]
     },
     chat: {
       eyebrow: '可選功能 · 短對話',
@@ -552,8 +554,8 @@ const translations: Record<UILanguage, UiCopy> = {
       melo: 'Melo',
       aiMode: (provider) => provider,
       offlineMode: '設定模型後即可對話',
-      aiLabel: (provider, model) =>
-        model ? `${provider} · ${model}` : `${provider} · 未記錄模型`,
+      aiLabel: (_provider, model) =>
+        model ? `模型 · ${model}` : '模型未記錄',
       safetyLabel: '安全停頓',
       unavailableTitle: 'Melo 未能加入 AI 回覆',
       noKeyBody: '請先選擇自己的模型服務、key 與模型。Melo 不提供預設模型。',
@@ -649,20 +651,13 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyReasons: ['草稿可能涉及即時風險。', 'Melo 會停止一般改寫，並鼓勵尋求現實世界支援。', '此字詞檢查只是原型，並非臨床評估。'],
       safetyFallbackReasons: ['供應商的回覆未通過原型輸出檢查。', 'Melo 已改用確定性的離線方案。', '訊息仍會以實際下一步作結。']
     },
-    footer: {
-      ai: (provider) => `僅供原型示範 · 不作診斷 · 草稿會傳送至 ${provider}`,
-      configured: (provider) => `僅供原型示範 · 已設定 ${provider} · 只會在要求改寫時傳送草稿`,
-      fallback: (provider) => `嘗試連接 ${provider} 未產生本結果 · 本結果由 Melo 本機後備方案產生`,
-      notSent: (provider) => `${provider} 設定需要修正 · 本次沒有向供應商發出請求 · 本結果由 Melo 本機後備方案產生`,
-      offline: '僅供原型示範 · 不作診斷 · 離線模式不會連接供應商'
-    },
     settings: {
       pageTitle: '設定',
       languageEyebrow: '一般設定',
       languageTitle: '介面語言',
       languageBody: '會更改導覽、按鈕、安全提示與結果頁；每次改寫仍可獨立選擇訊息語言。',
-      aiEyebrow: '連線',
-      title: '模型連線',
+      aiEyebrow: 'MELO',
+      title: '連接你的模型',
       noticeTitle: '使用自己的模型帳戶',
       noticeBody: 'Melo 不附帶模型服務。',
       provider: '模型服務',
@@ -680,7 +675,8 @@ const translations: Record<UILanguage, UiCopy> = {
       detailsHide: '收起',
       planServerTitle: '方案與伺服器',
       planServerSummary: (plan, region) => `${plan} · ${region}`,
-      privacyNote: 'Melo 不附帶模型服務。原生 App 會在這部裝置加密儲存 key；Web 預覽只會在目前分頁保留。',
+      privacyNoteNative: '使用你自己的模型帳戶。訊息與圖片會傳送到你選擇的服務；key 會加密保存在這部裝置。',
+      privacyNoteWeb: '使用你自己的模型帳戶。訊息與圖片會傳送到你選擇的服務；key 只會保留在目前分頁。',
       keyPlanMismatchTitle: 'Key 與方案不相符',
       keyPlanMismatchBody: '按量付費使用一般 key；Coding Plan 與 Token Plan 必須使用各自 sk-sp- 開頭的專屬 key。請選擇相符的方案與地區。',
       apiKey: 'API key',
@@ -772,7 +768,13 @@ const translations: Record<UILanguage, UiCopy> = {
       chat: '和 Melo 聊聊',
       configure: '设置与模型服务',
       noGuiltTitle: '进度会等你回来',
-      noGuiltBody: '不用维持连续记录。Calm Stars 会一直保留，Melo 也会在这里等你。'
+      noGuiltBody: '不用维持连续记录。Calm Stars 会一直保留，Melo 也会在这里等你。',
+      petTapAccessibility: '点一下 Melo，看看它的回应',
+      petTapLines: [
+        '嗨，我在这里陪你。',
+        '停一停，也是一个小进步。',
+        '我们可以一起走下一步。'
+      ]
     },
     chat: {
       eyebrow: '可选功能 · 短对话',
@@ -804,8 +806,8 @@ const translations: Record<UILanguage, UiCopy> = {
       melo: 'Melo',
       aiMode: (provider) => provider,
       offlineMode: '设置模型后即可对话',
-      aiLabel: (provider, model) =>
-        model ? `${provider} · ${model}` : `${provider} · 未记录模型`,
+      aiLabel: (_provider, model) =>
+        model ? `模型 · ${model}` : '模型未记录',
       safetyLabel: '安全停顿',
       unavailableTitle: 'Melo 未能加入 AI 回复',
       noKeyBody: '请先选择自己的模型服务、key 与模型。Melo 不提供默认模型。',
@@ -901,20 +903,13 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyReasons: ['草稿可能涉及即时风险。', 'Melo 会停止一般改写，并鼓励寻求现实世界支持。', '此关键词检查只是原型，并非临床评估。'],
       safetyFallbackReasons: ['服务商的回复未通过原型输出检查。', 'Melo 已改用确定性的离线方案。', '信息仍会以实际下一步作结。']
     },
-    footer: {
-      ai: (provider) => `仅供原型演示 · 不作诊断 · 草稿会发送至 ${provider}`,
-      configured: (provider) => `仅供原型演示 · 已设置 ${provider} · 只会在请求改写时发送草稿`,
-      fallback: (provider) => `尝试连接 ${provider} 未生成本结果 · 本结果由 Melo 本地后备方案生成`,
-      notSent: (provider) => `${provider} 设置需要修正 · 本次没有向服务商发送请求 · 本结果由 Melo 本地后备方案生成`,
-      offline: '仅供原型演示 · 不作诊断 · 离线模式不会连接服务商'
-    },
     settings: {
       pageTitle: '设置',
       languageEyebrow: '一般设置',
       languageTitle: '界面语言',
       languageBody: '会更改导航、按钮、安全提示与结果页；每次改写仍可单独选择信息语言。',
-      aiEyebrow: '连接',
-      title: '模型连接',
+      aiEyebrow: 'MELO',
+      title: '连接你的模型',
       noticeTitle: '使用自己的模型账户',
       noticeBody: 'Melo 不附带模型服务。',
       provider: '模型服务',
@@ -932,7 +927,8 @@ const translations: Record<UILanguage, UiCopy> = {
       detailsHide: '收起',
       planServerTitle: '方案与服务器',
       planServerSummary: (plan, region) => `${plan} · ${region}`,
-      privacyNote: 'Melo 不附带模型服务。原生 App 会在这台设备加密存储 key；Web 预览只会在当前标签页保留。',
+      privacyNoteNative: '使用你自己的模型账户。信息与图片会发送到你选择的服务；key 会加密保存在这台设备。',
+      privacyNoteWeb: '使用你自己的模型账户。信息与图片会发送到你选择的服务；key 只会保留在当前标签页。',
       keyPlanMismatchTitle: 'Key 与方案不相符',
       keyPlanMismatchBody: '按量付费使用普通 key；Coding Plan 与 Token Plan 必须使用各自 sk-sp- 开头的专用 key。请选择相符的方案与地区。',
       apiKey: 'API key',

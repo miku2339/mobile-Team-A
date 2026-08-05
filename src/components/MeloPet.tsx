@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme';
 import type { MeloExpression, PetMood } from '../types';
@@ -10,6 +10,8 @@ interface MeloPetProps {
   stars?: number;
   expression?: MeloExpression;
   animated?: boolean;
+  onPress?: () => void;
+  accessibilityLabel?: string;
 }
 
 const faceByMood: Record<PetMood, string> = {
@@ -33,10 +35,13 @@ export function MeloPet({
   size = 150,
   stars = 0,
   expression,
-  animated = true
+  animated = true,
+  onPress,
+  accessibilityLabel
 }: MeloPetProps) {
   const bob = useRef(new Animated.Value(0)).current;
   const breathe = useRef(new Animated.Value(1)).current;
+  const tapScale = useRef(new Animated.Value(1)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
@@ -105,90 +110,137 @@ export function MeloPet({
     return '';
   }, [stars]);
 
+  const reactToPress = () => {
+    onPress?.();
+    if (reduceMotion || !animated) return;
+
+    tapScale.stopAnimation();
+    tapScale.setValue(1);
+    Animated.sequence([
+      Animated.timing(tapScale, {
+        toValue: 0.92,
+        duration: 70,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true
+      }),
+      Animated.spring(tapScale, {
+        toValue: 1.08,
+        speed: 24,
+        bounciness: 8,
+        useNativeDriver: true
+      }),
+      Animated.spring(tapScale, {
+        toValue: 1,
+        speed: 20,
+        bounciness: 5,
+        useNativeDriver: true
+      })
+    ]).start();
+  };
+
   return (
-    <View style={[styles.stage, { width: size * 1.35, height: size * 1.15 }]}>
-      {mood === 'breathing' ? (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      onPress={reactToPress}
+      style={styles.stageButton}
+    >
+      <View style={[styles.stage, { width: size * 1.35, height: size * 1.15 }]}>
+        {mood === 'breathing' ? (
+          <Animated.View
+            style={[
+              styles.breatheHalo,
+              {
+                width: size * 1.13,
+                height: size * 1.13,
+                borderRadius: size,
+                transform: [{ scale: breathe }]
+              }
+            ]}
+          />
+        ) : null}
+
         <Animated.View
           style={[
-            styles.breatheHalo,
-            {
-              width: size * 1.13,
-              height: size * 1.13,
-              borderRadius: size,
-              transform: [{ scale: breathe }]
-            }
-          ]}
-        />
-      ) : null}
-
-      <Animated.View
-        style={[
-          styles.petWrap,
-          {
-            width: size,
-            height: size * 0.9,
-            transform: [{ translateY: bob }, { scale: breathe }]
-          }
-        ]}
-      >
-        <View
-          style={[
-            styles.ear,
-            styles.leftEar,
-            {
-              width: size * 0.27,
-              height: size * 0.27,
-              borderRadius: size,
-              borderWidth: Math.max(1, Math.round(size * 0.035))
-            }
-          ]}
-        />
-        <View
-          style={[
-            styles.ear,
-            styles.rightEar,
-            {
-              width: size * 0.27,
-              height: size * 0.27,
-              borderRadius: size,
-              borderWidth: Math.max(1, Math.round(size * 0.035))
-            }
-          ]}
-        />
-        <View
-          style={[
-            styles.body,
+            styles.petWrap,
             {
               width: size,
-              height: size * 0.82,
-              borderRadius: size * 0.42,
-              borderWidth: Math.max(1, Math.round(size * 0.04))
+              height: size * 0.9,
+              transform: [
+                { translateY: bob },
+                { scale: Animated.multiply(breathe, tapScale) }
+              ]
             }
           ]}
         >
-          {accessory ? <Text style={[styles.accessory, { fontSize: size * 0.2 }]}>{accessory}</Text> : null}
-          <Text
+          <View
             style={[
-              styles.face,
+              styles.ear,
+              styles.leftEar,
               {
-                fontSize:
-                  expression === 'encouraging' ? size * 0.12 : size * 0.16
+                width: size * 0.27,
+                height: size * 0.27,
+                borderRadius: size,
+                borderWidth: Math.max(1, Math.round(size * 0.035))
+              }
+            ]}
+          />
+          <View
+            style={[
+              styles.ear,
+              styles.rightEar,
+              {
+                width: size * 0.27,
+                height: size * 0.27,
+                borderRadius: size,
+                borderWidth: Math.max(1, Math.round(size * 0.035))
+              }
+            ]}
+          />
+          <View
+            style={[
+              styles.body,
+              {
+                width: size,
+                height: size * 0.82,
+                borderRadius: size * 0.42,
+                borderWidth: Math.max(1, Math.round(size * 0.04))
               }
             ]}
           >
-            {expression ? faceByExpression[expression] : faceByMood[mood]}
-          </Text>
-          <View style={[styles.blushRow, { top: size * 0.47 }]}>
-            <View style={[styles.blush, { width: size * 0.11, height: size * 0.05 }]} />
-            <View style={[styles.blush, { width: size * 0.11, height: size * 0.05 }]} />
+            {accessory ? (
+              <Text style={[styles.accessory, { fontSize: size * 0.2 }]}>
+                {accessory}
+              </Text>
+            ) : null}
+            <Text
+              style={[
+                styles.face,
+                {
+                  fontSize:
+                    expression === 'encouraging' ? size * 0.12 : size * 0.16
+                }
+              ]}
+            >
+              {expression ? faceByExpression[expression] : faceByMood[mood]}
+            </Text>
+            <View style={[styles.blushRow, { top: size * 0.47 }]}>
+              <View style={[styles.blush, { width: size * 0.11, height: size * 0.05 }]} />
+              <View style={[styles.blush, { width: size * 0.11, height: size * 0.05 }]} />
+            </View>
           </View>
-        </View>
-      </Animated.View>
-    </View>
+        </Animated.View>
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  stageButton: {
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   stage: {
     alignItems: 'center',
     justifyContent: 'center'

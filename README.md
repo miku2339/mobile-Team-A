@@ -55,7 +55,7 @@ Conversation context is intentionally local and bounded:
 
 Image input is opt-in at the **model level**. The user must turn on “this model accepts image input” only when their exact selected model supports OpenAI-compatible image content. Melo resizes and normalises selected images locally before a request; an image is never attached merely because the provider brand might offer some vision models.
 
-Each successful AI bubble records the provider and model that produced that reply. When the compatible response names the served model, Melo keeps that value; otherwise it keeps the exact Model ID sent in the request. This attribution stays with the stored message even if the user changes settings later.
+Each successful AI bubble records the provider and model that produced that reply. The Chat header shows the current service, while the quiet note under each reply shows only its exact Model ID. Stored attribution stays correct even if the user changes settings later.
 
 For each successful reply, the model may also choose one expression from a strict whitelist: `calm`, `listening`, `thinking`, `encouraging` or `concerned`. The app maps that value to the same animated Melo pet used on Home. The model cannot send arbitrary animation instructions, styles or code; unrecognised values fall back safely.
 
@@ -102,10 +102,12 @@ Melo rewards positive actions without punishing absence.
 - English, Traditional Chinese and Simplified Chinese interface switching
 - English, Traditional Chinese, Simplified Chinese and written Cantonese output
 - Before/After review, visible Copy feedback and a deterministic group-project demo
-- Responsive 320 px layouts, cross-platform safe areas and Reduce Motion support
+- Responsive phone, tablet portrait/landscape and desktop layouts, cross-platform safe areas and Reduce Motion support
 - Warm paper-like UI with a restrained lavender-to-warm-white background, one primary accent and grouped status rows instead of stacked pastel cards
 - Progressive-disclosure Settings: service, Alibaba plan/server and technical connection fields stay compact until the user opens them; the Save action remains easy to reach
-- Single-header Melo Chat with quieter per-message provider/model attribution and a compact composer toolbar
+- Single-header Melo Chat with the current service in the header, quiet per-message Model ID attribution and a compact composer toolbar
+- Tappable Home Melo with a short local expression, bounce and three language-specific responses; no provider request is made
+- A soft-lavender secondary treatment for **Talk to Melo**, preserving the stronger Guided Rewrite primary action
 - Copy and native Share actions
 - Offline fallback for the Guided Rewrite flow when no API key is available or a provider request fails; Melo Chat never fabricates an offline assistant reply
 - Provider results are labelled as AI only after a readable model response is received
@@ -168,8 +170,9 @@ Verified on this branch on 5 August 2026:
 - one explicitly authorised Alibaba Cloud Coding Plan China smoke test passed through Melo's real `rewriteMessage` adapter with `qwen3-coder-plus`, a synthetic non-sensitive draft and `source: ai` rather than fallback. No credential was written to the repository or documentation.
 - Computer Use then exercised the complete native iOS Simulator UI twice against an already configured, explicitly authorised Alibaba Coding Plan account. Gentle and Direct produced visibly different Traditional Chinese drafts; the result badge named Alibaba Coding Plan, while Metro logged exactly one `provider rewrite succeeded` entry per run with output lengths 62 and 53. The saved key was neither read nor displayed.
 - Computer Use visually verified the redesigned Home, single-header Chat and progressive-disclosure Settings sheet in Expo Go, including English and Traditional Chinese states. The restrained lavender-to-warm-white background, fixed Save action and disclosure accessibility states rendered without Metro runtime errors.
-- Computer Use also exercised multi-turn Melo Chat through the same authorised Simulator account with `qwen3.7-plus`. The provider returned context-aware, non-identical replies and selected the `encouraging` expression; each new response kept the quieter `Alibaba Cloud · Coding Plan · qwen3.7-plus` provenance label, and a full app reload restored the locally stored conversation and attribution.
+- Computer Use also exercised multi-turn Melo Chat through the same authorised Simulator account with `qwen3.7-plus`. The provider returned context-aware, non-identical replies and selected the `encouraging` expression; each new response kept its quiet `Model · qwen3.7-plus` note, and a full app reload restored the locally stored conversation and attribution.
 - A fully synthetic desk image generated for testing was imported into the iPhone 17 Simulator, selected through Expo Go's native photo picker, rendered in the user bubble and sent through the real configured image-capable Chat path. `qwen3.7-plus` correctly described the visible succulent, water bottle, headphones, purple notebook, pencils and phone; Metro recorded `Melo provider chat succeeded` with `historyMessages: 8`, `expression: calm` and the same model ID.
+- Computer Use rotated an iPad mini Simulator between portrait and landscape, exercised Home, the responsive Settings sheet and a six-turn Chat using a local synthetic OpenAI-compatible test service. The 800 px Chat column stayed centred, long messages scrolled correctly, and the header plus composer remained pinned without clipping. Melo's tap response and the revised **Talk to Melo** button were also verified in landscape. A separate iPhone 17 short-landscape pass kept the compact header, long transcript, image message and composer visible without clipping.
 
 These checks prove source/offline-demo readiness and the native simulator provider UI path. A physical-device Expo Go provider run on a teammate's own network still requires visible confirmation.
 
