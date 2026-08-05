@@ -314,7 +314,7 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyLabel: 'Safety pause',
       unavailableTitle: 'Melo could not add an AI reply',
       noKeyBody: 'Choose your own model service, key and model before starting a chat. Melo does not provide a default model.',
-      timeoutBody: (provider) => `${provider} did not reply within 30 seconds. No assistant message was added.`,
+      timeoutBody: (provider) => `${provider} did not reply within the time limit. No assistant message was added.`,
       networkBody: (provider) => `This device could not reach ${provider}. Check the network and selected region/server.`,
       httpBody: (provider, status) => `${provider} rejected the chat request${status ? ` with HTTP ${status}` : ''}. Check the key, model, plan, region and quota.`,
       invalidBody: (provider) => `${provider} returned no complete, readable chat message. Nothing was added to the conversation.`,
@@ -370,7 +370,7 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyTitle: 'Please get real-world support now',
       safetyBody: 'Contact someone you trust or local emergency services. Melo is not a crisis service, diagnosis tool or replacement for professional support.',
       providerFallbackTitle: 'AI rewrite did not complete',
-      providerTimeoutBody: (provider) => `${provider} did not finish within 30 seconds. Melo used the offline rewrite below instead.`,
+      providerTimeoutBody: (provider) => `${provider} did not finish within the time limit. Melo used the offline rewrite below instead.`,
       providerNetworkBody: (provider) => `Melo could not reach ${provider}. Check this device’s network and the selected region/server. The result below is an offline rewrite.`,
       providerHttpBody: (provider, status) => {
         if (status === 401 || status === 403) return `${provider} rejected the key or its permissions. Check the key, plan and region/server.`;
@@ -559,7 +559,7 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyLabel: '安全停頓',
       unavailableTitle: 'Melo 未能加入 AI 回覆',
       noKeyBody: '請先選擇自己的模型服務、key 與模型。Melo 不提供預設模型。',
-      timeoutBody: (provider) => `${provider} 未能在 30 秒內回覆；本次沒有加入助理訊息。`,
+      timeoutBody: (provider) => `${provider} 未能在時限內回覆；本次沒有加入助理訊息。`,
       networkBody: (provider) => `這部裝置無法連接 ${provider}。請檢查網絡及所選地區／伺服器。`,
       httpBody: (provider, status) => `${provider} 拒絕了對話請求${status ? `（HTTP ${status}）` : ''}。請檢查 key、模型、方案、地區及額度。`,
       invalidBody: (provider) => `${provider} 沒有傳回完整、可讀的對話訊息；對話中沒有加入任何內容。`,
@@ -615,7 +615,7 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyTitle: '請立即尋求現實世界的支援',
       safetyBody: '請聯絡你信任的人或當地緊急服務。Melo 不是危機服務、診斷工具，也不能取代專業支援。',
       providerFallbackTitle: 'AI 改寫未完成',
-      providerTimeoutBody: (provider) => `${provider} 未能在 30 秒內完成。Melo 已改用下方的離線改寫。`,
+      providerTimeoutBody: (provider) => `${provider} 未能在時限內完成。Melo 已改用下方的離線改寫。`,
       providerNetworkBody: (provider) => `Melo 無法連接 ${provider}。請檢查這部裝置的網絡及所選地區／伺服器；下方結果由離線改寫產生。`,
       providerHttpBody: (provider, status) => {
         if (status === 401 || status === 403) return `${provider} 拒絕了 key 或其權限。請檢查 key、方案及地區／伺服器。`;
@@ -811,7 +811,7 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyLabel: '安全停顿',
       unavailableTitle: 'Melo 未能加入 AI 回复',
       noKeyBody: '请先选择自己的模型服务、key 与模型。Melo 不提供默认模型。',
-      timeoutBody: (provider) => `${provider} 未能在 30 秒内回复；本次没有加入助手信息。`,
+      timeoutBody: (provider) => `${provider} 未能在时限内回复；本次没有加入助手信息。`,
       networkBody: (provider) => `这台设备无法连接 ${provider}。请检查网络及所选地区／服务器。`,
       httpBody: (provider, status) => `${provider} 拒绝了对话请求${status ? `（HTTP ${status}）` : ''}。请检查 key、模型、方案、地区及额度。`,
       invalidBody: (provider) => `${provider} 没有返回完整、可读的对话信息；对话中没有加入任何内容。`,
@@ -867,7 +867,7 @@ const translations: Record<UILanguage, UiCopy> = {
       safetyTitle: '请立即寻求现实世界的支持',
       safetyBody: '请联系你信任的人或当地紧急服务。Melo 不是危机服务、诊断工具，也不能取代专业支持。',
       providerFallbackTitle: 'AI 改写未完成',
-      providerTimeoutBody: (provider) => `${provider} 未能在 30 秒内完成。Melo 已改用下方的离线改写。`,
+      providerTimeoutBody: (provider) => `${provider} 未能在时限内完成。Melo 已改用下方的离线改写。`,
       providerNetworkBody: (provider) => `Melo 无法连接 ${provider}。请检查这台设备的网络及所选地区／服务器；下方结果由离线改写生成。`,
       providerHttpBody: (provider, status) => {
         if (status === 401 || status === 403) return `${provider} 拒绝了 key 或其权限。请检查 key、方案及地区／服务器。`;

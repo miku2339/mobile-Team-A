@@ -24,6 +24,8 @@ export interface ProviderDiagnostics {
 
 export interface ProviderCompletionOptions {
   maxTokens?: number;
+  runtime?: 'native' | 'web';
+  webProxyUrl?: string;
 }
 
 export type ProviderFailureReason = Extract<
@@ -44,14 +46,33 @@ export type ProviderCompletionOutcome =
       diagnostics: ProviderDiagnostics;
     };
 
-const providerTimeoutMs = 30_000;
+const providerTimeoutMs = 65_000;
 const maxProviderResponseCharacters = 64_000;
 const safeErrorCodePattern = /^[A-Za-z0-9._-]{1,64}$/;
 const safeRequestIdPattern = /^[A-Za-z0-9._:-]{1,128}$/;
 const safeModelPattern = /^[^\u0000-\u001F\u007F]{1,120}$/u;
+const localWebHosts = new Set(['localhost', '127.0.0.1', '::1']);
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, '');
+}
+
+function configuredWebProxyUrl(): string | undefined {
+  const configured = process.env.EXPO_PUBLIC_MELO_PROVIDER_PROXY_URL?.trim();
+  if (configured) return normalizeBaseUrl(configured);
+
+  const location = (globalThis as { location?: { hostname?: string } }).location;
+  const hostname = location?.hostname?.trim().toLowerCase();
+  if (!hostname || !localWebHosts.has(hostname)) return undefined;
+  const bracketedHost = hostname === '::1' ? '[::1]' : hostname;
+  return `http://${bracketedHost}:8787`;
+}
+
+function detectedRuntime(): 'native' | 'web' {
+  const location = (globalThis as { location?: { protocol?: string } }).location;
+  return location?.protocol === 'http:' || location?.protocol === 'https:'
+    ? 'web'
+    : 'native';
 }
 
 function safeErrorCode(value: unknown): string | undefined {
@@ -152,13 +173,39 @@ export async function requestProviderCompletion(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), providerTimeoutMs);
+  const runtime = options.runtime ?? detectedRuntime();
+  const webProxyUrl =
+    runtime === 'web'
+      ? normalizeBaseUrl(options.webProxyUrl ?? configuredWebProxyUrl() ?? '')
+      : '';
+
+  if (runtime === 'web' && !webProxyUrl) {
+    clearTimeout(timeout);
+    return {
+      ok: false,
+      reason: 'configuration-error',
+      requestSent: false,
+      diagnostics: { errorCode: 'web-proxy-unavailable' }
+    };
+  }
+
+  const requestUrl =
+    runtime === 'web'
+      ? `${webProxyUrl}/v1/chat/completions`
+      : toChatCompletionsUrl(baseUrl);
 
   try {
-    const response = await fetch(toChatCompletionsUrl(baseUrl), {
+    const response = await fetch(requestUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${settings.apiKey.trim()}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(runtime === 'web'
+          ? {
+              'X-Melo-Provider-Id': settings.provider,
+              'X-Melo-Upstream-Base-Url': baseUrl
+            }
+          : {})
       },
       body: JSON.stringify({
         model: settings.model.trim(),
@@ -231,14 +278,15 @@ export async function requestProviderCompletion(
       ...(requestId ? { requestId } : {})
     };
   } catch (error) {
+    const timedOut = error instanceof Error && error.name === 'AbortError';
     return {
       ok: false,
-      reason:
-        error instanceof Error && error.name === 'AbortError'
-          ? 'timeout'
-          : 'network-error',
+      reason: timedOut ? 'timeout' : 'network-error',
       requestSent: true,
-      diagnostics: {}
+      diagnostics:
+        runtime === 'web' && !timedOut
+          ? { errorCode: 'web-proxy-unreachable' }
+          : {}
     };
   } finally {
     clearTimeout(timeout);

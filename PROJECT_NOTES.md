@@ -27,6 +27,17 @@
 - 改用跨平台 Safe Area 容器，避免 Android 狀態列與主介面重疊
 - 加入自動化回歸測試、Expo Doctor／三平台 export CI、完整 Pitch 與 UI design system
 
+## Safari Web Provider update — 2026-08-05
+
+- 真實 Safari Web 直接呼叫阿里雲百鍊時，CORS preflight 在正式 Chat Completions POST 發出前收到 HTTP 401；這是瀏覽器跨域邊界，不是離線 fallback 或模型每次產生相同內容
+- 加入只供 Web 使用的同機 loopback proxy；`npm run web` 現在同時啟動 Expo Web 與 proxy，`npm run web:proxy` 可單獨啟動 proxy，`npm run web:expo` 則只啟動 Expo Web
+- Native iOS／Android 保留 direct-to-provider 路徑，不經此 Web proxy
+- Proxy 預設綁定 `127.0.0.1`，只接受 loopback browser origin，並只轉送通過現有 endpoint allowlist 的 Provider／Base URL 組合
+- Proxy 不持久保存或記錄 API key、Authorization header、訊息、圖片或 request body；操作 log 只顯示 Provider ID、upstream host、HTTP status 與耗時
+- 真實 Safari 經 loopback proxy 使用已授權阿里雲帳戶，成功取得兩段不相同的 `qwen3.7-plus` 回覆；每則回覆均保留準確模型標示
+- 已修正寬屏 Safari Web 顯示特別長真實回覆時的 message overflow；在 1440 × 900、390 × 844 及 1180 × 820 重測後，長回覆、模型標籤與輸入框均保持在 viewport 內
+- Full suite passed：62／62 tests
+
 ## 修改原因
 
 比賽要求 functional mobile / web prototype，Technical Implementation、Impact、UX 佔主要分數。單純 AI 改寫器容易顯得普通，因此加入虛擬寵物作情緒調節的引導角色；但功能仍控制在一個下午可完成的範圍。
@@ -51,9 +62,10 @@
 
 限制：
 
-- 目前是直接 client-to-provider request，正式產品不應照搬
-- Web 可能遇到 CORS
+- Native 仍是直接 client-to-provider；Web 使用本機 loopback proxy。兩者都只適合 prototype，正式產品不應直接照搬
+- Safari 直連阿里雲會在 CORS preflight 收到 HTTP 401；目前 proxy 只解決本機 Web 開發／演示，不是可公開部署的 backend
 - 安全 guard 只是關鍵字規則，不是可靠的危機識別模型
 - 寵物成長目前只有星星和三個簡單配件階段
 - 已加入核心純邏輯測試；仍未加入 backend、帳戶、資料庫或分析儀表板
 - Coding Plan／Token Plan 使用各自專屬 key 與地區 endpoint；Melo 只做類別配對，實際帳戶授權仍由阿里雲驗證
+- 真實 Provider 已在 Simulator 與 Safari Web 驗證；仍需在場地網絡以組員實體手機完成 Expo Go 的完整設定到結果可見確認

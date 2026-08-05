@@ -616,12 +616,32 @@ const styles = StyleSheet.create({
   messageGroupWide: { maxWidth: '78%' },
   userMessageGroup: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   meloMessageGroup: { alignSelf: 'flex-start', alignItems: 'flex-start' },
-  messageLine: { flexDirection: 'row', alignItems: 'flex-end', gap: 7, maxWidth: '100%' },
-  bubble: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 11 },
+  messageLine: {
+    width: '100%',
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 7,
+    maxWidth: '100%'
+  },
+  bubble: {
+    minWidth: 0,
+    maxWidth: '100%',
+    flexShrink: 1,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 11
+  },
   userBubble: { backgroundColor: colors.primary, borderBottomRightRadius: 6 },
   meloBubble: { backgroundColor: colors.surface, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: colors.border },
   safetyBubble: { backgroundColor: colors.dangerSoft, borderColor: colors.danger },
-  messageText: { color: colors.ink, fontSize: 15, lineHeight: 21 },
+  messageText: {
+    minWidth: 0,
+    flexShrink: 1,
+    color: colors.ink,
+    fontSize: 15,
+    lineHeight: 21
+  },
   messageImage: { width: 220, maxWidth: '100%', height: 150, borderRadius: 13, marginBottom: 9 },
   userMessageText: { color: '#FFFFFF' },
   sourceLabel: { color: colors.inkMuted, fontSize: 10, fontWeight: '700', marginTop: 4, marginLeft: 34 },
