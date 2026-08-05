@@ -83,6 +83,7 @@ Melo rewards positive actions without punishing absence.
 - React Native application built with Expo and TypeScript
 - Four-stage healthy-communication flow
 - Animated virtual pet with multiple moods
+- Platform icon, Android adaptive icon and Web favicon built from the same calm Melo face used inside the app
 - Twelve-second guided breathing interaction
 - Calm Stars and simple accessory progression
 - AI-assisted message rewriting
@@ -164,6 +165,7 @@ Verified on this branch on 5 August 2026:
 - the deterministic regression suite passes, including provider truth, bounded Chat context, local persistence, safety-boundary and image-capability cases;
 - Expo Doctor passes all 18 SDK 54 checks;
 - Web, iOS and Android production exports complete successfully;
+- the updated Melo-face platform icon configuration is present in all three exports; an installed standalone-build launcher check remains a final device-release gate;
 - the complete offline golden path was exercised at a 390 × 844 mobile viewport, including three interface languages, provider selection, Alibaba plan/region switching, Before/After, Copy feedback and Calm Stars;
 - a rendered provider flow accepted one deliberately delayed OpenAI-compatible response after 9 seconds, proving it is no longer cut off by the old 8-second timeout; exactly one POST was made for the run;
 - a rendered HTTP 500 flow showed `Offline fallback`, `AI rewrite did not complete` and `HTTP 500`, instead of presenting the deterministic template as model output;

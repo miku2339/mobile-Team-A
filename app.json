@@ -3,6 +3,7 @@
     "name": "Melo",
     "slug": "pausepal-expo",
     "version": "0.1.0",
+    "icon": "./assets/icon.png",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "ios": {
@@ -10,10 +11,15 @@
       "bundleIdentifier": "com.example.melo"
     },
     "android": {
-      "package": "com.example.melo"
+      "package": "com.example.melo",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F8F4EF"
+      }
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-secure-store",
