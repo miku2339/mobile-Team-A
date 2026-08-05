@@ -2,6 +2,13 @@
 
 [English README](README.md)
 
+## 下載完整交付包
+
+完整英文／繁中簡報、雙語報告、講稿、QA 摘要及乾淨 App 截圖位於
+[`docs/delivery/2026-08-05`](docs/delivery/2026-08-05)。如需一次下載，可直接使用
+[`Melo_Final_Package_2026.zip`](docs/delivery/2026-08-05/Melo_Final_Package_2026.zip)。
+可運行 App 原始碼位於 repository 根目錄，請依下方「開始使用」操作。
+
 一個以 **Mental Wellness + Healthy Communication** 為核心的 React Native / Expo 比賽原型。
 
 Melo 是一隻不會以飢餓、死亡或連續簽到向用戶施壓的虛擬寵物。它陪用戶完成一個短暫 pause，再把原本情緒化的訊息改寫成較冷靜、清楚和可執行的表達。
@@ -25,7 +32,7 @@ Melo 是一隻不會以飢餓、死亡或連續簽到向用戶施壓的虛擬寵
 - iOS / Android 使用 Expo SecureStore 儲存設定；Web 只保留在目前瀏覽器分頁
 - Guided Rewrite 在 API 不可用或未填 key 時會使用標示清楚的離線改寫；Melo Chat 不會偽造離線模型回覆
 - 只有收到可讀取的模型回覆才會標示為 AI 結果；離線模板不會冒充 Provider 回覆
-- Provider 最長等待 30 秒，並分開顯示逾時、網絡、HTTP、回覆格式及本機設定錯誤
+- Client 最長等待 65 秒，並分開顯示逾時、網絡、HTTP、回覆格式及本機設定錯誤
 - 簡單危機字詞 guard：偵測到明顯自傷／傷人語句時停止一般改寫，改為建議尋求真實世界支援
 - Before／After、Copy 可見回饋、Share，以及英文／繁中／簡中／廣東話輸出
 - 支援手機、平板橫直向與桌面版排版、跨平台 Safe Area 與 Reduce Motion
@@ -65,7 +72,14 @@ npx expo start
 - iPhone / Android：用 Expo Go 掃描 QR code
 - iOS Simulator：按 `i`
 - Android Emulator：按 `a`
-- Web：按 `w`
+
+Web 版請不要直接按 `w`，改用：
+
+```bash
+npm run web
+```
+
+`npm run web` 會同時啟動 Expo Web 與 Melo 的同機 loopback Provider proxy。若 Expo Web 已在另一個 terminal 運行，可用 `npm run web:proxy` 單獨啟動 proxy。原生 iOS／Android 仍直接連接所選 Provider，不會經過這個只供 Web 使用的 proxy。
 
 如 Expo 提示套件版本不一致：
 
@@ -96,11 +110,13 @@ npx expo-doctor
 - 經明確授權後，以合成且不含敏感資料的草稿，使用 `qwen3-coder-plus` 對阿里雲百鍊 Coding Plan 中國區完成一次真實 `rewriteMessage` adapter smoke test；結果為 `source: ai`，不是 fallback。憑證沒有寫入 repository 或文件
 - 再以 Computer Use 在 iOS Simulator 走完整原生 UI，使用已設定且獲明確授權的阿里雲 Coding Plan 帳戶連續測試「溫和」與「直接」兩種語氣。兩段繁中模型輸出明顯不同，結果 badge 均顯示阿里雲 Coding Plan；Metro 每輪各有一行 `provider rewrite succeeded`，output length 分別為 62 與 53。測試沒有讀取或顯示已儲存 key
 - Computer Use 亦以同一個已授權 Simulator 帳戶完成多輪 Melo Chat，使用 `qwen3.7-plus` 收到具上下文且不同的回覆；模型選擇 `encouraging` 表情，每則回覆以較安靜的 `模型 · qwen3.7-plus` 顯示 Model ID，完整重新載入 App 後本機對話與歸屬仍能還原
+- Safari Web 最初直接呼叫阿里雲時，瀏覽器的 CORS preflight 在真正 Chat Completions POST 發出前收到 HTTP 401。Web client 改經 Melo loopback proxy 後，真實 Safari session 已收到兩段不相同的 `qwen3.7-plus` 回覆，而且兩則回覆均顯示準確模型標籤
 - Computer Use 已在 Expo Go 驗證單一標題列 Chat、漸進展開設定頁、固定儲存按鈕與淡紫至暖白背景；英文及繁體中文狀態均可正常操作，Metro 沒有 runtime error
 - 測試用的全合成桌面圖片已匯入 iPhone 17 Simulator，經 Expo Go 原生相片選擇器加入用戶訊息並由真實設定的圖片對話路徑送出；`qwen3.7-plus` 正確描述盆栽、水瓶、耳機、紫色筆記本、鉛筆及手機，Metro 記錄 `Melo provider chat succeeded`、`historyMessages: 8`、`expression: calm` 及相同 Model ID
 - Computer Use 已把 iPad mini Simulator 在橫屏及直屏之間切換，驗證首頁、響應式設定頁，以及使用本機合成 OpenAI-compatible 測試服務的六輪長對話。Chat 的 800 px 內容欄保持置中，長訊息可正常捲動，標題列與輸入框固定且沒有裁切；首頁 Melo 觸控反應與新版「和 Melo 聊聊」按鈕也已在橫屏驗證。另一次 iPhone 17 短橫屏測試亦確認緊湊標題列、長對話、圖片訊息與輸入框均保持可見且沒有裁切
+- 特別長的真實模型回覆曾令 Safari Web 寬屏訊息版面 overflow；問題現已修正。以 1440 × 900、390 × 844 及 1180 × 820 重新檢查後，長回覆、準確模型標籤與輸入框均保持在 viewport 內
 
-以上證明 source／離線 Demo 與原生模擬器 Provider UI 路徑已就緒；組員真機仍需在其自身網絡下完成一次可見確認。
+以上證明 source／離線 Demo、原生模擬器 Provider UI 路徑及本機 Safari Web 路徑已就緒；仍需在場地網絡以組員實體手機完成一次 Expo Go Provider 可見確認。
 
 ## API provider 設定
 
@@ -111,7 +127,7 @@ npx expo-doctor
 - Model ID
 - 目前準確 Model ID 是否支援圖片輸入
 
-程式只提供 endpoint 預設，不會提供或啟用任何 Provider 帳戶、模型服務、key、額度或預設 Model ID。畫面最初顯示的 Provider preset 並不等於已完成設定；用戶仍須明確選擇並保存自己的連線資料：
+程式只提供 endpoint 預設及本機 Web 開發 proxy，不會提供或啟用任何 Provider 帳戶、模型服務、key、額度、託管 proxy 或預設 Model ID。畫面最初顯示的 Provider preset 並不等於已完成設定；用戶仍須明確選擇並保存自己的連線資料：
 
 | Provider | Base URL |
 |---|---|
@@ -134,7 +150,7 @@ Melo 可以攔截一般 key 與 `sk-sp-` 套餐 key 這種明顯不相符，但�
 
 ### Provider 結果與接口診斷
 
-Melo 最長等待 Provider 30 秒。只有 Chat Completions 回覆含有可讀訊息，結果頁才會顯示所選 Provider；本機模板一律標示為 **離線改寫／Offline fallback**。
+Melo Client 最長等待 Provider 65 秒；本機 Web proxy 會在上游請求達 60 秒時停止等待。只有 Chat Completions 回覆含有可讀訊息，結果頁才會顯示所選 Provider；本機模板一律標示為 **離線改寫／Offline fallback**。
 
 失敗情況會分成：
 
@@ -151,7 +167,17 @@ Melo 最長等待 Provider 30 秒。只有 Chat Completions 回覆含有可讀�
 
 ### Web 注意事項
 
-部分供應商可能不允許瀏覽器直接跨域請求。比賽現場最穩定的演示方式是 Expo Go 原生 App；Web 版可使用本機 proxy 作後續擴充。
+Safari 直接呼叫阿里雲時，已實際觀察到 CORS preflight 回傳 HTTP 401，令真正的 Chat Completions POST 無法發出。Web 開發路徑因此把請求送到同一部電腦的 `http://127.0.0.1:8787/v1/chat/completions`，再由 proxy 在瀏覽器 CORS 邊界外呼叫 Provider。
+
+此 proxy 的範圍刻意收窄：
+
+- 預設只監聽 loopback，並只接受 `localhost`、`127.0.0.1` 或 `::1` 的瀏覽器 origin
+- 只會轉送通過 Melo endpoint allowlist 的 Provider／Base URL 組合
+- 不會持久保存或記錄 API key、Authorization header、訊息文字、圖片或 request body
+- 操作 log 只包含 Provider ID、upstream host、status 及耗時
+- 它是本機 prototype bridge，不是託管模型服務或正式產品的 secret store
+
+使用 `npm run web` 可同時啟動 Expo Web 與 proxy；`npm run web:proxy` 則只啟動 proxy。原生 iOS／Android 保留 direct-to-provider 路徑。正式產品仍應使用可信任 backend，而不是把這個本機開發 bridge 公開部署。
 
 ## 安全與私隱界線
 
@@ -160,7 +186,7 @@ Melo 最長等待 Provider 30 秒。只有 Chat Completions 回覆含有可讀�
 - Guided Rewrite 草稿只存在目前 App state；Melo Chat 則刻意只在目前裝置／瀏覽器保存最近 24 則訊息，並提供清除本機紀錄操作
 - API key 沒有硬編碼在 source code
 - 原生裝置以 SecureStore 保存 Provider 設定及 Chat 訊息文字；Web 設定只在目前 session 保存，而 Web Chat 使用 local storage
-- Guided Rewrite 輸入，以及最多最近 8 則 Melo Chat 訊息與用戶明確啟用的附件，會直接傳送到其選擇的 AI Provider
+- Guided Rewrite 輸入，以及最多最近 8 則 Melo Chat 訊息與用戶明確啟用的附件，會傳送到其選擇的 AI Provider：Native 直接發送，Web 則經不作持久保存的 loopback proxy
 - Chat 沒有帳戶、雲端歷史或跨裝置同步
 - 正式產品應加入可信任 backend、速率限制、provider moderation、同意流程、資料保留政策及完整安全評估
 - `src/services/safety.ts` 只是簡單 prototype keyword guard，不應被描述成臨床風險偵測模型
@@ -200,8 +226,8 @@ Melo 最長等待 Provider 30 秒。只有 Chat Completions 回覆含有可讀�
 
 ## 目前限制
 
-- 此分支尚未完成任何 Expo Go 真機驗證
-- 直接由 client 呼叫 Provider 只適合 prototype；Web 亦可能受到 CORS 限制
+- 尚未在場地網絡以組員實體手機完成 Expo Go Provider 驗證
+- Native 直接由 client 呼叫 Provider，以及 Web 使用本機 proxy，都只適合 prototype；Safari 直連阿里雲會在 CORS preflight 被擋，正式 Web 部署仍需可信任 backend
 - 安全 guard 只是關鍵字規則，可能漏判或誤判，不能作臨床風險評估
 - 離線 fallback 只對固定小組項目 Demo 及常見模式有較具體的理解，不是完整自然語言模型
 - 已授權真實帳戶已在 iOS Simulator UI 完成 Guided Rewrite 與 Melo Chat 路徑，但尚未在實體手機完成設定到結果的整段流程

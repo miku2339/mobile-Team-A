@@ -2,6 +2,15 @@
 
 [繁體中文](README.zh-Hant.md)
 
+## Downloadable delivery package
+
+The complete presentation, bilingual reports, presenter script, QA summary and
+clean app screenshots are available in
+[`docs/delivery/2026-08-05`](docs/delivery/2026-08-05). For a single download,
+use [`Melo_Final_Package_2026.zip`](docs/delivery/2026-08-05/Melo_Final_Package_2026.zip).
+The application source remains the repository root and can be run with the
+Quick Start commands below.
+
 Melo is a **React Native + Expo mental-wellness prototype** that helps students pause before sending an emotional message, identify what they are feeling, and rewrite the message in a calmer, clearer and more constructive way.
 
 The project combines three ideas:
@@ -112,7 +121,7 @@ Melo rewards positive actions without punishing absence.
 - Copy and native Share actions
 - Offline fallback for the Guided Rewrite flow when no API key is available or a provider request fails; Melo Chat never fabricates an offline assistant reply
 - Provider results are labelled as AI only after a readable model response is received
-- 30-second provider timeout with distinct timeout, network, HTTP, invalid-response and local-configuration diagnostics
+- 65-second client time limit with distinct timeout, network, HTTP, invalid-response and local-configuration diagnostics
 - Basic prototype safety keyword guard
 - Native secure settings storage through Expo SecureStore
 - Web session-only API settings storage
@@ -140,8 +149,15 @@ After Expo starts:
 
 - scan the QR code with **Expo Go** on iPhone or Android;
 - press `i` to open the iOS Simulator;
-- press `a` to open an Android emulator;
-- press `w` to open the web version.
+- press `a` to open an Android emulator.
+
+For the Web version, use the Web launcher instead of pressing `w`:
+
+```bash
+npm run web
+```
+
+`npm run web` starts Expo Web and Melo's same-device loopback provider proxy together. If Expo Web is already running separately, `npm run web:proxy` starts only the proxy. Native iOS and Android builds continue to connect directly to the selected provider and do not use this Web-only proxy.
 
 If Expo reports dependency-version mismatches, run:
 
@@ -173,10 +189,12 @@ Verified on this branch on 5 August 2026:
 - Computer Use then exercised the complete native iOS Simulator UI twice against an already configured, explicitly authorised Alibaba Coding Plan account. Gentle and Direct produced visibly different Traditional Chinese drafts; the result badge named Alibaba Coding Plan, while Metro logged exactly one `provider rewrite succeeded` entry per run with output lengths 62 and 53. The saved key was neither read nor displayed.
 - Computer Use visually verified the redesigned Home, single-header Chat and progressive-disclosure Settings sheet in Expo Go, including English and Traditional Chinese states. The restrained lavender-to-warm-white background, fixed Save action and disclosure accessibility states rendered without Metro runtime errors.
 - Computer Use also exercised multi-turn Melo Chat through the same authorised Simulator account with `qwen3.7-plus`. The provider returned context-aware, non-identical replies and selected the `encouraging` expression; each new response kept its quiet `Model · qwen3.7-plus` note, and a full app reload restored the locally stored conversation and attribution.
+- Safari Web initially failed when it called Alibaba Cloud directly: the browser's CORS preflight received HTTP 401 before the real Chat Completions POST could run. After the Web client was routed through Melo's loopback proxy, a real Safari session received two non-identical `qwen3.7-plus` replies and displayed the exact model label on both replies.
 - A fully synthetic desk image generated for testing was imported into the iPhone 17 Simulator, selected through Expo Go's native photo picker, rendered in the user bubble and sent through the real configured image-capable Chat path. `qwen3.7-plus` correctly described the visible succulent, water bottle, headphones, purple notebook, pencils and phone; Metro recorded `Melo provider chat succeeded` with `historyMessages: 8`, `expression: calm` and the same model ID.
 - Computer Use rotated an iPad mini Simulator between portrait and landscape, exercised Home, the responsive Settings sheet and a six-turn Chat using a local synthetic OpenAI-compatible test service. The 800 px Chat column stayed centred, long messages scrolled correctly, and the header plus composer remained pinned without clipping. Melo's tap response and the revised **Talk to Melo** button were also verified in landscape. A separate iPhone 17 short-landscape pass kept the compact header, long transcript, image message and composer visible without clipping.
+- The wide-screen Safari Web overflow found with an unusually long live model reply has been fixed. The long reply, its exact model label and the composer stayed within the viewport when rechecked at 1440 × 900, 390 × 844 and 1180 × 820.
 
-These checks prove source/offline-demo readiness and the native simulator provider UI path. A physical-device Expo Go provider run on a teammate's own network still requires visible confirmation.
+These checks prove source/offline-demo readiness, the native simulator provider UI path and the local Safari Web path. A physical-device Expo Go provider run on a teammate's phone over the venue network still requires visible confirmation.
 
 ## AI Provider Setup
 
@@ -187,7 +205,7 @@ Open the gear icon in the top-right corner of the app. Following a BYOK connecti
 - **Model ID**
 - whether that exact model **supports image input**
 
-Melo only supplies endpoint presets. It does **not** supply or activate a provider account, model, API key, credits, proxy or default Model ID. The initially visible provider preset is not a configured service: the user must make and save an explicit connection choice.
+Melo only supplies endpoint presets and a local Web development proxy. It does **not** supply or activate a provider account, model, API key, credits, hosted proxy or default Model ID. The initially visible provider preset is not a configured service: the user must make and save an explicit connection choice.
 
 Configured provider endpoints:
 
@@ -229,7 +247,7 @@ For a named provider, Melo accepts only that provider's official compatible host
 
 ### Provider-result truth and diagnostics
 
-Melo waits up to 30 seconds for a provider request. It displays the selected provider badge only when the response contains a readable Chat Completions message. A local template is always labelled **Offline fallback** and never attributed to the selected provider.
+Melo waits up to 65 seconds on the client for a provider request; the local Web proxy stops an upstream request after 60 seconds. It displays the selected provider badge only when the response contains a readable Chat Completions message. A local template is always labelled **Offline fallback** and never attributed to the selected provider.
 
 Failed requests are separated into:
 
@@ -251,7 +269,19 @@ The current prototype stores settings as follows:
 - **iOS / Android:** Expo SecureStore on the local device;
 - **Web:** browser session storage, cleared when the browser session ends.
 
-For this prototype, the app communicates directly with the provider selected by the user. A production application should use a trusted backend instead.
+### Web loopback proxy
+
+A direct Safari request to Alibaba Cloud was observed to fail at the browser CORS preflight with HTTP 401. The Web development path therefore sends Chat Completions requests to a same-device proxy at `http://127.0.0.1:8787/v1/chat/completions`; that proxy performs the provider request outside the browser CORS boundary.
+
+The proxy is intentionally narrow:
+
+- it listens on loopback by default and accepts only loopback browser origins (`localhost`, `127.0.0.1` or `::1`);
+- it forwards only provider/Base URL combinations accepted by Melo's endpoint allowlist;
+- it does not persist or log API keys, Authorization headers, message text, images or request bodies;
+- its operational log contains only provider ID, upstream host, status and duration;
+- it is a local prototype bridge, not a hosted model service or production secret store.
+
+Run `npm run web` to start Expo Web and the proxy together, or `npm run web:proxy` to start only the proxy. Native iOS and Android requests remain direct-to-provider. A production application should use a trusted backend instead of this local development bridge.
 
 The provider flow is inspired by the separation used in Qoder's BYOK custom-model setup: provider first, then connection details supplied by the user. Unlike Qoder's hosted tiers, Melo offers no built-in model service. See [Qoder Custom Models](https://docs.qoder.com/user-guide/chat/custom-models).
 
@@ -318,7 +348,8 @@ React Native / Expo client
         ├── Basic safety keyword guard
         │
         ├── User-selected OpenAI-compatible provider
-        │       └── POST /chat/completions
+        │       ├── Native → direct POST /chat/completions
+        │       └── Web → loopback proxy → allowlisted /chat/completions
         │
         └── Whitelisted model expression → animated Melo UI
 ```
@@ -334,7 +365,7 @@ Current boundaries:
 - Guided Rewrite drafts stay in the current application state; Melo Chat intentionally retains only its newest 24 messages on the current device/browser and provides a clear-local-history action;
 - API keys are not hard-coded in the repository;
 - native settings and native Chat text use Expo SecureStore; Web settings remain session-only while Web Chat history uses local storage;
-- Guided Rewrite input, and at most the latest eight Melo Chat messages plus any explicitly enabled attachment, are sent directly to the AI provider selected by the user;
+- Guided Rewrite input, and at most the latest eight Melo Chat messages plus any explicitly enabled attachment, are sent to the AI provider selected by the user—directly on Native, or through the non-persisting loopback proxy on Web;
 - the prototype safety guard is based on a small keyword list;
 - a detected high-risk phrase stops the normal rewrite or Chat provider flow and recommends real-world support;
 - the keyword guard is **not** a reliable clinical risk model.
@@ -478,9 +509,9 @@ Then open a pull request or coordinate with the team before merging into `main`.
 
 ## Current Limitations
 
-- No physical-device Expo Go run has yet been completed on this branch.
-- Direct client-to-provider API calls are suitable only for a prototype.
-- Some providers may block browser requests because of CORS restrictions.
+- No physical-device Expo Go provider run has yet been completed on a teammate's phone over the venue network.
+- Native direct client-to-provider API calls and the local Web proxy are suitable only for a prototype.
+- Safari direct-to-Alibaba requests are blocked at CORS preflight; local Web development now uses the loopback proxy, while any hosted deployment would still need a trusted backend.
 - The safety guard is intentionally basic and can miss or misclassify risk.
 - The offline fallback recognises the fixed group-project demo and common patterns, but is not full natural-language understanding.
 - The authorised real-account path has been verified through the iOS Simulator UI for Guided Rewrite and Melo Chat, but has not yet been repeated through the complete settings-to-result flow on a physical phone.

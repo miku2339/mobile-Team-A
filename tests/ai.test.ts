@@ -424,7 +424,9 @@ test('provider requests are not aborted at the old eight-second boundary', async
     context.mock.timers.tick(8_001);
     assert.equal(requestState.signal?.aborted, false);
 
-    context.mock.timers.tick(22_000);
+    // The provider client now allows up to 65 seconds so slow, real model
+    // responses are not cut off at the previous 30-second boundary.
+    context.mock.timers.tick(57_000);
     await resultPromise;
   } finally {
     globalThis.fetch = originalFetch;
