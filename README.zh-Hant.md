@@ -11,13 +11,13 @@ Melo 是一隻不會以飢餓、死亡或連續簽到向用戶施壓的虛擬寵
 - 四段主要流程：原訊息 → 情緒與對象 → 呼吸 pause → 改寫結果
 - 虛擬寵物 Melo，會按流程改變表情與呼吸動畫
 - 類似 ChatGPT App 訊息形式的 Melo Chat，使用 Melo 自己的陪伴人格與真實已設定 Provider 回覆
-- 每則成功的 AI 回覆都保存並顯示當時實際使用的 Provider 與模型，不會在之後更換設定時誤改舊標籤
+- 每則成功的 AI 回覆都保存當時實際使用的 Provider 與模型；Chat 標題列顯示目前服務，每則回覆下只以安靜小字顯示準確 Model ID，之後更換設定也不會誤改舊歸屬
 - Chat 最近 24 則訊息只保存在目前裝置／瀏覽器；每輪最多只把最近 8 則對話連同系統指示送到 Provider
 - 圖片輸入預設關閉；只有用戶確認目前準確 Model ID 支援圖片後才可手動啟用
 - 模型可以選擇 Melo 表情，但只限 `calm`、`listening`、`thinking`、`encouraging`、`concerned` 五種由 App 控制的狀態
 - Calm Stars：完成一次健康溝通流程即可獲得星星
 - 無 streak 懲罰；寵物不會因為用戶沒有打開 App 而生病或難過
-- 內建 OpenAI、Google AI Studio、阿里雲百鍊、DeepSeek、Kimi、MiniMax、智譜 BigModel 及自訂 OpenAI-compatible 連線預設；真實帳戶相容性仍需逐一驗證
+- 內建 OpenAI、Google AI Studio、阿里雲百鍊、DeepSeek、Kimi、MiniMax、Z.ai BigModel 及自訂 OpenAI-compatible 連線預設；真實帳戶相容性仍需逐一驗證
 - Melo 不提供模型服務、key、額度或已啟用的預設 Provider／模型；用戶自行選擇並填寫 API key、Base URL 和準確的 Model ID
 - 阿里雲提供兩層選單：Plan（按量／Coding Plan／Token Plan）及該 Plan 支援的地區／伺服器
 - 介面可在繁體中文、簡體中文、English 之間即時切換並保存
@@ -27,10 +27,12 @@ Melo 是一隻不會以飢餓、死亡或連續簽到向用戶施壓的虛擬寵
 - Provider 最長等待 30 秒，並分開顯示逾時、網絡、HTTP、回覆格式及本機設定錯誤
 - 簡單危機字詞 guard：偵測到明顯自傷／傷人語句時停止一般改寫，改為建議尋求真實世界支援
 - Before／After、Copy 可見回饋、Share，以及英文／繁中／簡中／廣東話輸出
-- 支援 320 px 窄屏、跨平台 Safe Area 與 Reduce Motion
+- 支援手機、平板橫直向與桌面版排版、跨平台 Safe Area 與 Reduce Motion
 - 暖白紙張式 UI，加入克制的淡紫至暖白背景漸變，以單一主色、較收斂圓角和分隔資訊列取代多層彩色卡片
 - 設定頁採漸進展開：模型服務、阿里雲方案／伺服器及技術連線欄位預設保持精簡，主要儲存按鈕固定在底部
-- Melo Chat 使用單一標題列，並把每則回覆的 Provider／Model 改成較安靜的訊息註記，輸入區工具也更精簡
+- Melo Chat 使用單一標題列；目前模型服務留在標題列，每則回覆只保留較安靜的 Model ID 註記，輸入區工具也更精簡
+- 首頁 Melo 可以觸控，會在本機切換表情、輕彈一下並輪流回應三句對應介面語言的短句，不會呼叫模型
+- 「和 Melo 聊聊」改用淡薰衣草次要按鈕，與背景有清楚層次，同時保留改寫流程作為主要操作
 
 ## Melo Chat
 
@@ -46,7 +48,7 @@ Melo Chat 是一個獨立的全高對話畫面，包含訊息氣泡、固定輸�
 
 圖片屬於 Model 級別的手動能力設定。用戶必須在設定中確認「這個 Model 支援圖片輸入」，Melo 才會開放附件按鈕；程式會先在本機縮放及標準化圖片。Provider 品牌本身有視覺模型，不代表目前填入的 Model ID 一定支援圖片。
 
-成功回覆會在該訊息下方顯示 Provider 與模型。若相容接口回傳實際 served model，Melo 會保存該值；否則保存請求時填入的準確 Model ID。模型也可輸出一個表情狀態，App 再把它映射到首頁同一隻動態 Melo。模型不能傳入任意動畫、樣式或程式碼；不在白名單內的值會安全回退。Melo 只是一個溝通及自我整理伙伴，不是心理治療、診斷或危機服務。
+成功回覆會保存 Provider 與模型歸屬，但訊息下方只顯示準確 Model ID，避免重複標題列的服務資訊。若相容接口回傳實際 served model，Melo 會保存該值；否則保存請求時填入的準確 Model ID。模型也可輸出一個表情狀態，App 再把它映射到首頁同一隻動態 Melo。模型不能傳入任意動畫、樣式或程式碼；不在白名單內的值會安全回退。Melo 只是一個溝通及自我整理伙伴，不是心理治療、診斷或危機服務。
 
 ## 開始使用
 
@@ -91,9 +93,10 @@ npx expo-doctor
 - 渲染 HTTP 500 流程會顯示 `Offline fallback`、`AI rewrite did not complete` 及 `HTTP 500`，不會把本機確定性模板冒充為模型結果
 - 經明確授權後，以合成且不含敏感資料的草稿，使用 `qwen3-coder-plus` 對阿里雲百鍊 Coding Plan 中國區完成一次真實 `rewriteMessage` adapter smoke test；結果為 `source: ai`，不是 fallback。憑證沒有寫入 repository 或文件
 - 再以 Computer Use 在 iOS Simulator 走完整原生 UI，使用已設定且獲明確授權的阿里雲 Coding Plan 帳戶連續測試「溫和」與「直接」兩種語氣。兩段繁中模型輸出明顯不同，結果 badge 均顯示阿里雲 Coding Plan；Metro 每輪各有一行 `provider rewrite succeeded`，output length 分別為 62 與 53。測試沒有讀取或顯示已儲存 key
-- Computer Use 亦以同一個已授權 Simulator 帳戶完成多輪 Melo Chat，使用 `qwen3.7-plus` 收到具上下文且不同的回覆；模型選擇 `encouraging` 表情，每則回覆以較安靜的 `Alibaba Cloud · Coding Plan · qwen3.7-plus` 顯示來源，完整重新載入 App 後本機對話與歸屬標籤仍能還原
+- Computer Use 亦以同一個已授權 Simulator 帳戶完成多輪 Melo Chat，使用 `qwen3.7-plus` 收到具上下文且不同的回覆；模型選擇 `encouraging` 表情，每則回覆以較安靜的 `模型 · qwen3.7-plus` 顯示 Model ID，完整重新載入 App 後本機對話與歸屬仍能還原
 - Computer Use 已在 Expo Go 驗證單一標題列 Chat、漸進展開設定頁、固定儲存按鈕與淡紫至暖白背景；英文及繁體中文狀態均可正常操作，Metro 沒有 runtime error
 - 測試用的全合成桌面圖片已匯入 iPhone 17 Simulator，經 Expo Go 原生相片選擇器加入用戶訊息並由真實設定的圖片對話路徑送出；`qwen3.7-plus` 正確描述盆栽、水瓶、耳機、紫色筆記本、鉛筆及手機，Metro 記錄 `Melo provider chat succeeded`、`historyMessages: 8`、`expression: calm` 及相同 Model ID
+- Computer Use 已把 iPad mini Simulator 在橫屏及直屏之間切換，驗證首頁、響應式設定頁，以及使用本機合成 OpenAI-compatible 測試服務的六輪長對話。Chat 的 800 px 內容欄保持置中，長訊息可正常捲動，標題列與輸入框固定且沒有裁切；首頁 Melo 觸控反應與新版「和 Melo 聊聊」按鈕也已在橫屏驗證。另一次 iPhone 17 短橫屏測試亦確認緊湊標題列、長對話、圖片訊息與輸入框均保持可見且沒有裁切
 
 以上證明 source／離線 Demo 與原生模擬器 Provider UI 路徑已就緒；組員真機仍需在其自身網絡下完成一次可見確認。
 
@@ -116,7 +119,7 @@ npx expo-doctor
 | [DeepSeek](https://api-docs.deepseek.com/) | `https://api.deepseek.com` |
 | [Kimi](https://platform.kimi.com/docs/overview) | `https://api.moonshot.cn/v1` |
 | [MiniMax](https://platform.minimaxi.com/docs/api-reference/text-chat-openai) | `https://api.minimaxi.com/v1` |
-| 智譜 BigModel | `https://open.bigmodel.cn/api/paas/v4` |
+| Z.ai BigModel | `https://open.bigmodel.cn/api/paas/v4` |
 | Custom provider | 使用者自行輸入 |
 
 百鍊不同 Plan、地域及業務空間使用不同的 key 與 Base URL。設定分成兩層選單：按量付費、Coding Plan 或 Token Plan；再選擇該 Plan 顯示的地區／伺服器。按量付費提供中國（北京）、新加坡、美國（維珍尼亞）及自訂業務空間 endpoint；Coding Plan 與 Token Plan 提供中國（北京）及新加坡 endpoint。切換 Plan 或地區會清除舊 key，避免誤用。

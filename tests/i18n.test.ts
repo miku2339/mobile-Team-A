@@ -15,6 +15,7 @@ test('settings offers exactly English, Traditional Chinese and Simplified Chines
   assert.equal(getTranslations('en').providerNames.bigmodel, 'Z.ai BigModel');
   assert.equal(getTranslations('zh-Hant').providerNames.bigmodel, 'Z.ai BigModel');
   assert.equal(getTranslations('zh-Hans').providerNames.bigmodel, 'Z.ai BigModel');
+  assert.equal('footer' in getTranslations('en'), false);
 });
 
 test('saved UI language accepts only the three supported locales', () => {
@@ -38,8 +39,6 @@ test('all UI languages disclose provider fallback instead of claiming AI success
       copy.result.providerDiagnostic(401, 'invalid_api_key', 'request-123'),
       /401.*invalid_api_key.*request-123/
     );
-    assert.match(copy.footer.fallback('Test Provider'), /Test Provider/);
-    assert.match(copy.footer.notSent('Test Provider'), /Test Provider/);
   }
 });
 
@@ -64,9 +63,10 @@ test('Melo chat has complete session, safety and provider states in every UI lan
     assert.equal(copy.chat.title, 'Melo');
     assert.equal(copy.chat.quickPrompts.length, 2);
     assert.match(copy.chat.aiMode('Test Provider'), /Test Provider/);
-    assert.match(
+    assert.match(copy.chat.aiLabel('Test Provider', 'test-model'), /test-model/);
+    assert.doesNotMatch(
       copy.chat.aiLabel('Test Provider', 'test-model'),
-      /Test Provider.*test-model/
+      /Test Provider/
     );
     assert.match(copy.chat.sessionNotice, /8/);
     assert.match(copy.chat.sessionNotice, /service|服務|服务/);
@@ -91,6 +91,8 @@ test('home keeps model details in settings and message provenance, not the welco
     const copy = getTranslations(language);
     assert.ok(copy.home.connectionLabel.length > 0);
     assert.ok(copy.home.calmStarsLabel.length > 0);
+    assert.equal(copy.home.petTapLines.length, 3);
+    assert.ok(copy.home.petTapAccessibility.length > 0);
     assert.match(copy.home.providerReady('Test Provider', 'private-model-id'), /Test Provider/);
     assert.doesNotMatch(
       copy.home.providerReady('Test Provider', 'private-model-id'),

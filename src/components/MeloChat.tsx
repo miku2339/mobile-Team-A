@@ -100,8 +100,10 @@ export function MeloChat({
   onBack,
   onRewriteLatest
 }: MeloChatProps) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const compact = width < 380;
+  const wide = width >= 900;
+  const shortLandscape = width > height && height < 500;
   const imagePendingWithoutSupport = Boolean(pendingImage && !imageInputEnabled);
   const transcriptRef = useRef<ScrollView>(null);
   const hasMessages = messages.length > 0;
@@ -130,6 +132,7 @@ export function MeloChat({
     : '';
 
   useEffect(() => {
+    if (!hasMessages && !sending) return;
     const frame = requestAnimationFrame(() => {
       transcriptRef.current?.scrollToEnd({ animated: hasMessages });
     });
@@ -137,8 +140,8 @@ export function MeloChat({
   }, [hasMessages, messages, sending]);
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.chatHeader}>
+    <View style={[styles.screen, wide && styles.screenWide]}>
+      <View style={[styles.chatHeader, shortLandscape && styles.chatHeaderShortLandscape]}>
         <Pressable
           accessibilityLabel={copy.common.back}
           accessibilityRole="button"
@@ -155,32 +158,37 @@ export function MeloChat({
         />
         <View style={styles.headerCopy}>
           <Text style={styles.title}>{copy.chat.title}</Text>
-          <Text numberOfLines={1} style={styles.headerStatus}>
+          <Text numberOfLines={shortLandscape || compact ? 2 : 1} style={styles.headerStatus}>
             {providerConfigured
               ? copy.chat.aiMode(providerName)
               : copy.chat.offlineMode}
           </Text>
         </View>
-        <View
-          style={[
-            styles.modeDot,
-            providerConfigured ? styles.modeDotOnline : styles.modeDotOffline
-          ]}
-        />
+        {!shortLandscape && !compact ? (
+          <View
+            style={[
+              styles.modeDot,
+              providerConfigured ? styles.modeDotOnline : styles.modeDotOffline
+            ]}
+          />
+        ) : null}
         <Pressable
           accessibilityLabel={copy.settingsAccessibility}
           accessibilityRole="button"
+          hitSlop={6}
           onPress={onConfigure}
           style={({ pressed }) => [styles.headerSettings, pressed && styles.pressed]}
         >
-          <Text style={styles.headerSettingsText}>{copy.settings.pageTitle}</Text>
+          <Text style={[styles.headerSettingsText, (shortLandscape || compact) && styles.headerSettingsIcon]}>
+            {shortLandscape || compact ? '⚙︎' : copy.settings.pageTitle}
+          </Text>
         </Pressable>
       </View>
 
       <ScrollView
         ref={transcriptRef}
         style={styles.messageScroll}
-        contentContainerStyle={styles.messageContent}
+        contentContainerStyle={[styles.messageContent, shortLandscape && styles.messageContentShortLandscape]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.boundaryCard}>
@@ -266,6 +274,7 @@ export function MeloChat({
                 key={message.id}
                 style={[
                   styles.messageGroup,
+                  wide && styles.messageGroupWide,
                   isUser ? styles.userMessageGroup : styles.meloMessageGroup
                 ]}
               >
@@ -392,6 +401,7 @@ export function MeloChat({
           <View style={styles.utilityRow}>
             <Pressable
               accessibilityRole="button"
+              hitSlop={6}
               disabled={sending}
               onPress={onRewriteLatest}
               style={({ pressed }) => [
@@ -404,6 +414,7 @@ export function MeloChat({
             </Pressable>
             <Pressable
               accessibilityRole="button"
+              hitSlop={6}
               disabled={sending}
               onPress={onClear}
               style={({ pressed }) => [
@@ -527,6 +538,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: 'transparent'
   },
+  screenWide: {
+    maxWidth: 800,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.border
+  },
   chatHeader: {
     minHeight: 66,
     paddingHorizontal: 14,
@@ -534,10 +551,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255, 252, 248, 0.88)',
     borderBottomWidth: 1,
     borderBottomColor: colors.border
   },
+  chatHeaderShortLandscape: { minHeight: 54, paddingVertical: 4 },
   backButton: {
     width: 44,
     height: 44,
@@ -558,8 +576,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6
   },
   headerSettingsText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
+  headerSettingsIcon: { fontSize: 20, lineHeight: 24 },
   messageScroll: { flex: 1 },
   messageContent: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 18, gap: 14 },
+  messageContentShortLandscape: { paddingTop: 6, paddingBottom: 8, gap: 8 },
   boundaryCard: {
     alignSelf: 'center',
     maxWidth: 500,
@@ -593,6 +613,7 @@ const styles = StyleSheet.create({
   promptText: { color: colors.primaryDark, fontSize: 13, lineHeight: 18, fontWeight: '700' },
   transcript: { gap: 14 },
   messageGroup: { maxWidth: '92%' },
+  messageGroupWide: { maxWidth: '78%' },
   userMessageGroup: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   meloMessageGroup: { alignSelf: 'flex-start', alignItems: 'flex-start' },
   messageLine: { flexDirection: 'row', alignItems: 'flex-end', gap: 7, maxWidth: '100%' },
@@ -614,7 +635,7 @@ const styles = StyleSheet.create({
   actionStack: { flexDirection: 'column' },
   actionButton: { flex: 1 },
   composerDock: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255, 252, 248, 0.94)',
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingHorizontal: 12,

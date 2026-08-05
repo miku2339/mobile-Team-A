@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
-  Alert,
+  AccessibilityInfo,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Modal,
   Platform,
   Pressable,
@@ -9,10 +10,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
   useWindowDimensions
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   ALIBABA_ENDPOINTS,
@@ -33,6 +36,7 @@ import {
   selectAlibabaRegionSettings,
   selectProviderSettings
 } from '../utils/settingsTransitions';
+import { showPlatformAlert } from '../utils/platformFeedback';
 import { ChoiceChip } from './ChoiceChip';
 import { PrimaryButton } from './PrimaryButton';
 
@@ -114,12 +118,15 @@ export function AISettingsModal({
 }: AISettingsModalProps) {
   const { width } = useWindowDimensions();
   const compactLayout = width < 380;
+  const roomyLayout = width >= 700;
+  const wideWebModal = Platform.OS === 'web' && width >= 760;
   const [draft, setDraft] = useState<AISettings>(value);
   const [showKey, setShowKey] = useState(false);
   const [providerExpanded, setProviderExpanded] = useState(!value.apiKey.trim());
   const [alibabaExpanded, setAlibabaExpanded] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [aboutExpanded, setAboutExpanded] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const [saving, setSaving] = useState(false);
   const copy = getTranslations(language);
   const alibabaProvider = isAlibabaProvider(draft.provider) ? draft.provider : null;
@@ -152,11 +159,44 @@ export function AISettingsModal({
     }
   }, [value, visible]);
 
+  useEffect(() => {
+    if (
+      Platform.OS === 'android' &&
+      UIManager.setLayoutAnimationEnabledExperimental
+    ) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotion
+    );
+    return () => subscription.remove();
+  }, []);
+
+  const animateDisclosure = () => {
+    if (reduceMotion) return;
+    LayoutAnimation.configureNext({
+      duration: 180,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity
+      },
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity
+      }
+    });
+  };
+
   const selectProvider = (provider: ProviderId) => {
     setDraft((current) => selectProviderSettings(current, provider));
   };
 
   const selectProviderGroup = (provider: ProviderGroup) => {
+    animateDisclosure();
     if (provider === 'alibaba') {
       if (!isAlibaba) selectProvider('bailian');
       setProviderExpanded(false);
@@ -174,6 +214,7 @@ export function AISettingsModal({
     if (!alibabaProvider) return;
     const endpoint = ALIBABA_ENDPOINTS[alibabaProvider].find((item) => item.id === region);
     if (!endpoint) return;
+    animateDisclosure();
     setDraft((current) => selectAlibabaRegionSettings(current, endpoint.id));
     setAlibabaExpanded(false);
     setDetailsExpanded(true);
@@ -186,26 +227,26 @@ export function AISettingsModal({
       return;
     }
     if (alibabaProvider && !isAlibabaKeyCompatible(alibabaProvider, draft.apiKey)) {
-      Alert.alert(copy.settings.keyPlanMismatchTitle, copy.settings.keyPlanMismatchBody);
+      showPlatformAlert(copy.settings.keyPlanMismatchTitle, copy.settings.keyPlanMismatchBody);
       return;
     }
     if (!draft.baseUrl.trim()) {
-      Alert.alert(copy.settings.missingBaseUrlTitle, copy.settings.missingBaseUrlBody);
+      showPlatformAlert(copy.settings.missingBaseUrlTitle, copy.settings.missingBaseUrlBody);
       return;
     }
     if (!isAllowedProviderBaseUrl(draft.baseUrl)) {
-      Alert.alert(copy.settings.unsafeUrlTitle, copy.settings.unsafeUrlBody);
+      showPlatformAlert(copy.settings.unsafeUrlTitle, copy.settings.unsafeUrlBody);
       return;
     }
     if (!isAllowedProviderEndpoint(draft.provider, draft.baseUrl)) {
-      Alert.alert(
+      showPlatformAlert(
         copy.settings.unexpectedProviderHostTitle,
         copy.settings.unexpectedProviderHostBody
       );
       return;
     }
     if (!draft.model.trim()) {
-      Alert.alert(copy.settings.missingModelTitle, copy.settings.missingModelBody);
+      showPlatformAlert(copy.settings.missingModelTitle, copy.settings.missingModelBody);
       return;
     }
 
@@ -226,26 +267,30 @@ export function AISettingsModal({
   const clear = async () => {
     await onClear();
     setDraft((current) => ({ ...current, apiKey: '' }));
-    Alert.alert(copy.settings.keyClearedTitle, copy.settings.keyClearedBody);
+    showPlatformAlert(copy.settings.keyClearedTitle, copy.settings.keyClearedBody);
   };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flex}
+        style={[styles.flex, wideWebModal && styles.webBackdrop]}
       >
-        <LinearGradient
-          colors={[colors.lavenderGlow, colors.background, colors.background]}
-          locations={[0, 0.32, 1]}
-          pointerEvents="none"
-          style={StyleSheet.absoluteFill}
-        />
-        <ScrollView
-          style={styles.flex}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+        <SafeAreaView
+          edges={['top', 'bottom', 'left', 'right']}
+          style={[styles.flex, wideWebModal && styles.webModalCard]}
         >
+          <LinearGradient
+            colors={[colors.lavenderGlow, colors.background, colors.background]}
+            locations={[0, 0.32, 1]}
+            pointerEvents="none"
+            style={StyleSheet.absoluteFill}
+          />
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={[styles.content, roomyLayout && styles.contentRoomy]}
+            keyboardShouldPersistTaps="handled"
+          >
           <View style={styles.header}>
             <View style={styles.headerCopy}>
               <Text style={styles.title}>{copy.settings.pageTitle}</Text>
@@ -277,12 +322,19 @@ export function AISettingsModal({
           <View style={styles.sectionDivider} />
           <Text style={styles.eyebrow}>{copy.settings.aiEyebrow}</Text>
           <Text style={styles.aiTitle}>{copy.settings.title}</Text>
-          <Text style={styles.privacyNote}>{copy.settings.privacyNote}</Text>
+          <Text style={styles.privacyNote}>
+            {Platform.OS === 'web'
+              ? copy.settings.privacyNoteWeb
+              : copy.settings.privacyNoteNative}
+          </Text>
 
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ expanded: providerExpanded }}
-            onPress={() => setProviderExpanded((current) => !current)}
+            onPress={() => {
+              animateDisclosure();
+              setProviderExpanded((current) => !current);
+            }}
             style={({ pressed }) => [styles.detailsToggle, pressed && styles.planOptionPressed]}
           >
             <View style={styles.detailsToggleCopy}>
@@ -319,7 +371,10 @@ export function AISettingsModal({
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ expanded: alibabaExpanded }}
-                onPress={() => setAlibabaExpanded((current) => !current)}
+                onPress={() => {
+                  animateDisclosure();
+                  setAlibabaExpanded((current) => !current);
+                }}
                 style={({ pressed }) => [styles.detailsToggle, pressed && styles.planOptionPressed]}
               >
                 <View style={styles.detailsToggleCopy}>
@@ -384,7 +439,10 @@ export function AISettingsModal({
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ expanded: detailsExpanded }}
-            onPress={() => setDetailsExpanded((current) => !current)}
+            onPress={() => {
+              animateDisclosure();
+              setDetailsExpanded((current) => !current);
+            }}
             style={({ pressed }) => [
               styles.detailsToggle,
               pressed && styles.planOptionPressed
@@ -523,7 +581,10 @@ export function AISettingsModal({
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ expanded: aboutExpanded }}
-            onPress={() => setAboutExpanded((current) => !current)}
+            onPress={() => {
+              animateDisclosure();
+              setAboutExpanded((current) => !current);
+            }}
             style={({ pressed }) => [styles.aboutToggle, pressed && styles.planOptionPressed]}
           >
             <Text style={styles.aboutToggleText}>{copy.settings.prototypeTitle}</Text>
@@ -536,10 +597,16 @@ export function AISettingsModal({
               <Text style={styles.warningText}>{copy.settings.prototypeBody}</Text>
             </View>
           ) : null}
-        </ScrollView>
-        <View style={styles.saveDock}>
-          <PrimaryButton label={copy.settings.save} onPress={save} loading={saving} />
-        </View>
+          </ScrollView>
+          <View style={styles.saveDock}>
+            <PrimaryButton
+              label={copy.settings.save}
+              onPress={save}
+              loading={saving}
+              style={styles.saveButton}
+            />
+          </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -547,12 +614,29 @@ export function AISettingsModal({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  webBackdrop: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: 'rgba(43, 39, 49, 0.18)'
+  },
+  webModalCard: {
+    width: '100%',
+    maxWidth: 760,
+    maxHeight: '92%',
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
   content: {
     padding: 22,
     paddingBottom: 24,
     backgroundColor: 'transparent',
     gap: 10
   },
+  contentRoomy: { width: '100%', maxWidth: 720, alignSelf: 'center' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -771,7 +855,9 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.border
+    borderTopColor: colors.border,
+    alignItems: 'center'
   },
+  saveButton: { width: '100%', maxWidth: 720 },
   buttonStack: { gap: 10, marginTop: 10 }
 });
