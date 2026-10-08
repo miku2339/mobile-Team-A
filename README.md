@@ -139,7 +139,7 @@ This demo intentionally targets **Expo SDK 54**. During the SDK 57 transition, E
 ### Install and run
 
 ```bash
-git clone https://github.com/miku233333/mobile-Team-A.git
+git clone https://github.com/miku2339/mobile-Team-A.git
 cd mobile-Team-A
 npm install
 npx expo start
